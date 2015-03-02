@@ -8,6 +8,7 @@ import (
 	cmsutils "github.com/silviucm/utils"
 	"io/ioutil"
 	"log"
+	"strings"
 	"text/template"
 )
 
@@ -28,10 +29,12 @@ func (tbl *Table) GenerateTableStruct() {
 	log.Println("Beginning generation for table: ", tbl.TableName)
 	fmt.Println("--------------------------------------------------------------------------------------------")
 
-	tmpl, err := template.New("test").Parse(TABLE_TEMPLATE)
+	tmpl, err := template.New("tableTemplate").Parse(TABLE_TEMPLATE)
 	if err != nil {
 		log.Fatal("GenerateTableStruct() fatal error running template.New:", err)
 	}
+
+	//
 
 	var generatedTemplate bytes.Buffer
 	err = tmpl.Execute(&generatedTemplate, tbl)
@@ -69,12 +72,15 @@ func (tbl *Table) CollectColumns() error {
 			log.Fatal("CollectColumns() fatal error inside rows.Next() iteration: ", err)
 		}
 
-		// instantiate a table struct
+		// instantiate a column struct
 		currentColumn := &Column{
 			Name:         currentColumnName,
 			Type:         udtName,
 			DefaultValue: columnDefault,
 			Nullable:     DecodeNullable(isNullable),
+
+			GoName: GetGoFriendlyNameForColumn(currentColumnName),
+			GoType: GetGoTypeForColumn(udtName),
 
 			DbHandle: tbl.DbHandle,
 			Options:  tbl.Options,
@@ -103,10 +109,48 @@ type Column struct {
 	DefaultValue sql.NullString
 	Nullable     bool
 
+	GoName string
+	GoType string
+
 	ColumnComment string
 }
 
 /* Util methods */
+
+func GetGoFriendlyNameForColumn(columnName string) string {
+
+	// find if the table name has underscore
+	if strings.Contains(columnName, "_") == false {
+		return strings.Title(columnName)
+	}
+
+	subNames := strings.Split(columnName, "_")
+
+	if subNames == nil {
+		log.Fatal("GetGoFriendlyNameForColumn() fatal error for column name: ", columnName, ". Please ensure a valid column name is provided.")
+	}
+
+	for i := range subNames {
+		subNames[i] = strings.Title(subNames[i])
+	}
+
+	return strings.Join(subNames, "")
+}
+
+func GetGoTypeForColumn(udtType string) string {
+
+	var correspondingGoType = ""
+
+	switch udtType {
+	case "varchar":
+		return "string"
+	case "int4":
+		return "int"
+	}
+
+	return correspondingGoType
+}
+
 func DecodeNullable(isNullable string) bool {
 
 	if isNullable == "NO" {

@@ -127,6 +127,7 @@ func (t *ToolOptions) CollectTables() error {
 }
 
 /* Util methods */
+
 func GetGoFriendlyNameForTable(tableName string) string {
 
 	// find if the table name has underscore

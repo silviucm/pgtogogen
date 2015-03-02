@@ -1,6 +1,6 @@
 package main
 
-// Usage: dbGenPgToGo -h=yourhostnameoripaddress -n=yourdatabasename -u=yourusername -pass=yourpassword
+// Usage: pgtogogen -h=yourhostnameoripaddress -n=yourdatabasename -u=yourusername -pass=yourpassword
 
 import (
 	"flag"

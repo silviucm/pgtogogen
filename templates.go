@@ -7,7 +7,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const {{.GoFriendlyName}}_REAL_TABLE_NAME string = "{{.TableName}}"
+const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.TableName}}"
 
 type {{.GoFriendlyName}} struct {
 	
