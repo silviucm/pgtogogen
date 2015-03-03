@@ -107,6 +107,8 @@ func (t *ToolOptions) CollectTables() error {
 			Options:        t,
 		}
 
+		currentTable.GoTypesToImport = make(map[string]string)
+
 		// collect the columns for the table
 		// colect all the column info
 		if err := currentTable.CollectColumns(); err != nil {
