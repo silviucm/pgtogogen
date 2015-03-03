@@ -10,5 +10,6 @@ import (
 const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.TableName}}"
 
 type {{.GoFriendlyName}} struct {
-	
+	{{range .Columns}}{{.GoName}} {{.GoType}}
+	{{end}}	
 }`
