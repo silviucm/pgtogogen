@@ -20,6 +20,8 @@ type Table struct {
 	Columns        []Column
 	TableName      string
 	GoFriendlyName string
+
+	GoTypesToImport map[string]string
 }
 
 func (tbl *Table) GenerateTableStruct() {
@@ -54,10 +56,11 @@ func (tbl *Table) GenerateTableStruct() {
 
 func (tbl *Table) CollectColumns() error {
 
-	var currentColumnName, isNullable, udtName string
+	var currentColumnName, isNullable, dataType string
 	var columnDefault sql.NullString
+	var charMaxLength sql.NullInt64
 
-	rows, err := tbl.DbHandle.Query("SELECT column_name, column_default, is_nullable, udt_name FROM information_schema.columns "+
+	rows, err := tbl.DbHandle.Query("SELECT column_name, column_default, is_nullable, data_type, character_maximum_length FROM information_schema.columns "+
 		" WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position;", tbl.TableName)
 
 	if err != nil {
@@ -66,20 +69,31 @@ func (tbl *Table) CollectColumns() error {
 	defer rows.Close()
 
 	for rows.Next() {
-		err := rows.Scan(&currentColumnName, &columnDefault, &isNullable, &udtName)
+		err := rows.Scan(&currentColumnName, &columnDefault, &isNullable, &dataType, &charMaxLength)
 		if err != nil {
 			log.Fatal("CollectColumns() fatal error inside rows.Next() iteration: ", err)
+		}
+
+		resolvedGoType, goTypeToImport := GetGoTypeForColumn(dataType)
+
+		if goTypeToImport != "" {
+			if tbl.GoTypesToImport == nil {
+				tbl.GoTypesToImport = make(map[string]string)
+			}
+
+			tbl.GoTypesToImport[goTypeToImport] = goTypeToImport
 		}
 
 		// instantiate a column struct
 		currentColumn := &Column{
 			Name:         currentColumnName,
-			Type:         udtName,
+			Type:         dataType,
 			DefaultValue: columnDefault,
 			Nullable:     DecodeNullable(isNullable),
+			MaxLength:    DecodeMaxLength(charMaxLength),
 
 			GoName: GetGoFriendlyNameForColumn(currentColumnName),
-			GoType: GetGoTypeForColumn(udtName),
+			GoType: resolvedGoType,
 
 			DbHandle: tbl.DbHandle,
 			Options:  tbl.Options,

@@ -14,6 +14,7 @@ type Column struct {
 
 	Name         string
 	Type         string
+	MaxLength    int
 	DefaultValue sql.NullString
 	Nullable     bool
 
@@ -45,18 +46,28 @@ func GetGoFriendlyNameForColumn(columnName string) string {
 	return strings.Join(subNames, "")
 }
 
-func GetGoTypeForColumn(udtType string) string {
+func GetGoTypeForColumn(udtType string) (typeReturn string, goTypeToImport string) {
 
-	var correspondingGoType = ""
+	typeReturn = ""
+	goTypeToImport = ""
 
 	switch udtType {
-	case "varchar":
-		return "string"
-	case "int4":
-		return "int"
+	case "character varying":
+		typeReturn = "string"
+	case "integer":
+		typeReturn = "int"
+	case "boolean":
+		typeReturn = "bool"
+	case "uuid":
+		typeReturn = "string"
+	case "biging":
+		typeReturn = "int64"
+	case "timestamp with time zone":
+		typeReturn = "time.Time"
+		goTypeToImport = "time"
 	}
 
-	return correspondingGoType
+	return typeReturn, goTypeToImport
 }
 
 func DecodeNullable(isNullable string) bool {
@@ -70,4 +81,13 @@ func DecodeNullable(isNullable string) bool {
 	}
 
 	return false
+}
+
+func DecodeMaxLength(maxLength sql.NullInt64) int {
+
+	if maxLength.Valid == false {
+		return -1
+	}
+
+	return int(maxLength.Int64)
 }
