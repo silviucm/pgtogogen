@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
+	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
+	"text/template"
 )
 
 type ToolOptions struct {
@@ -99,6 +102,18 @@ func (t *ToolOptions) Generate() {
 			t.Tables[i].GenerateTableStruct()
 
 			// generate the queries by PK
+			if t.GeneratePKGetters == true {
+				fmt.Println("Generating Primary Key Accessor Methods...")
+				for colIndex := range t.Tables[i].Columns {
+					if t.Tables[i].Columns[colIndex].IsPK {
+						pkGetter := t.Tables[i].Columns[colIndex].GeneratePKGetter(&t.Tables[i])
+						if _, writeErr := t.Tables[i].GeneratedTemplate.Write(pkGetter); writeErr != nil {
+							log.Fatal("Generate fatal error writing bytes from the GeneratePKGetter call: ", writeErr)
+						}
+					}
+
+				}
+			}
 		}
 	} else {
 		fmt.Println("Done: No tables found.")
@@ -127,6 +142,32 @@ func (t *ToolOptions) WriteFiles() {
 
 }
 
+// Generates the base file of the package that contains initialization functions,
+// convenience functions to get the database handle, query preparing, etc
+func (t *ToolOptions) GenerateBaseFile() {
+
+	tmpl, err := template.New("tableTemplate").Parse(BASE_TEMPLATE)
+	if err != nil {
+		log.Fatal("GenerateBaseFile() fatal error running template.New:", err)
+	}
+
+	var generatedTemplate bytes.Buffer
+	err = tmpl.Execute(&generatedTemplate, t)
+	if err != nil {
+		log.Fatal("GenerateBaseFile() fatal error running template.Execute:", err)
+	}
+
+	var filePath string = t.OutputFolder + "/pgtogogenBase.go"
+
+	err = ioutil.WriteFile(filePath, generatedTemplate.Bytes(), 0644)
+	if err != nil {
+		log.Fatal("GenerateBaseFile() - WriteToFile() fatal error writing to file:", err)
+	}
+
+	fmt.Println("Finished generating the base file. Filepath: " + filePath)
+
+}
+
 func (t *ToolOptions) CollectTables() error {
 
 	var currentTableName string
@@ -146,10 +187,11 @@ func (t *ToolOptions) CollectTables() error {
 
 		// instantiate a table struct
 		currentTable := &Table{
-			TableName:      currentTableName,
-			GoFriendlyName: GetGoFriendlyNameForTable(currentTableName),
-			DbHandle:       t.DbHandle,
-			Options:        t,
+			TableName:         currentTableName,
+			GoFriendlyName:    GetGoFriendlyNameForTable(currentTableName),
+			DbHandle:          t.DbHandle,
+			Options:           t,
+			GeneratedTemplate: bytes.Buffer{},
 		}
 
 		currentTable.GoTypesToImport = make(map[string]string)

@@ -83,6 +83,9 @@ func main() {
 	// start writing to files
 	options.WriteFiles()
 
+	// write the base file
+	options.GenerateBaseFile()
+
 }
 
 func validateFlags() bool {

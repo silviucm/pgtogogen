@@ -23,7 +23,7 @@ type Table struct {
 
 	GoTypesToImport map[string]string
 
-	GeneratedTemplate string
+	GeneratedTemplate bytes.Buffer
 }
 
 func (tbl *Table) CollectColumns() error {
@@ -63,6 +63,7 @@ func (tbl *Table) CollectColumns() error {
 			DefaultValue: columnDefault,
 			Nullable:     DecodeNullable(isNullable),
 			MaxLength:    DecodeMaxLength(charMaxLength),
+			IsSequence:   DecodeIsColumnSequence(columnDefault),
 
 			IsCompositePK: false, IsPK: false, IsFK: false,
 
@@ -159,6 +160,58 @@ func (tbl *Table) CollectPrimaryKeys() error {
 
 }
 
+func (tbl *Table) CollectForeignKeys() error {
+
+	var currentConstraintName, currentColumnName, foreignTableName, foreignColumnName string
+
+	var fkQuery string = `SELECT
+		    tc.constraint_name, kcu.column_name, 
+		    ccu.table_name AS foreign_table_name,
+		    ccu.column_name AS foreign_column_name 
+		FROM 
+		    information_schema.table_constraints AS tc 
+		    JOIN information_schema.key_column_usage AS kcu
+		      ON tc.constraint_name = kcu.constraint_name
+		    JOIN information_schema.constraint_column_usage AS ccu
+		      ON ccu.constraint_name = tc.constraint_name
+		WHERE constraint_type = 'FOREIGN KEY' AND tc.table_catalog=$1 AND tc.table_name=$2 ;`
+
+	rows, err := tbl.DbHandle.Query(fkQuery, tbl.Options.DbName, tbl.TableName)
+
+	if err != nil {
+		log.Fatal("CollectForeignKeys() fatal error running the query:", err)
+	}
+	defer rows.Close()
+
+	var numberOfFKs int = 0
+
+	for rows.Next() {
+		err := rows.Scan(&currentConstraintName, &currentColumnName, &foreignTableName, &foreignColumnName)
+		if err != nil {
+			log.Fatal("CollectForeignKeys() fatal error inside rows.Next() iteration: ", err)
+		}
+
+		if tbl.Columns == nil {
+			log.Fatal("CollectForeignKeys() FATAL: nil Columns slice in this Table struct instance. Make sure you call CollectColumns() before this method.")
+		}
+
+		for i := range tbl.Columns {
+			if tbl.Columns[i].Name == currentColumnName {
+				tbl.Columns[i].IsFK = true
+				numberOfFKs = numberOfFKs + 1
+			}
+		}
+
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
+}
+
 func (tbl *Table) GenerateTableStruct() {
 
 	tmpl, err := template.New("tableTemplate").Parse(TABLE_TEMPLATE)
@@ -172,7 +225,9 @@ func (tbl *Table) GenerateTableStruct() {
 		log.Fatal("GenerateTableStruct() fatal error running template.Execute:", err)
 	}
 
-	tbl.GeneratedTemplate = tbl.GeneratedTemplate + generatedTemplate.String()
+	if _, err = tbl.GeneratedTemplate.Write(generatedTemplate.Bytes()); err != nil {
+		log.Fatal("GenerateTableStruct() fatal error writing the generated template bytes to the table buffer:", err)
+	}
 
 	fmt.Println("Table structure generated.")
 
@@ -182,7 +237,7 @@ func (tbl *Table) WriteToFile() {
 
 	var filePath string = tbl.Options.OutputFolder + "/" + cmsutils.String.CamelCase(tbl.GoFriendlyName) + ".go"
 
-	err := ioutil.WriteFile(filePath, []byte(tbl.GeneratedTemplate), 0644)
+	err := ioutil.WriteFile(filePath, tbl.GeneratedTemplate.Bytes(), 0644)
 	if err != nil {
 		log.Fatal("WriteToFile() fatal error writing to file:", err)
 	}
