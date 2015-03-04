@@ -9,7 +9,7 @@ import (
 
 const ARGS_ERROR_HEADER string = "\n-------------------------\nARGUMENTS ERROR:\n-------------------------\n"
 
-var dbHost, dbPort, dbName, dbUser, dbPass, outputFolder *string
+var dbHost, dbPort, dbName, dbUser, dbPass, outputFolder, packageName *string
 var generatePKGetters, generateGuidGetters *bool
 
 func main() {
@@ -25,6 +25,9 @@ func main() {
 
 	// location settings
 	outputFolder = flag.String("o", "./models", "the output folder to generate the db structures, defaults to models")
+
+	// package settings
+	packageName = flag.String("pkg", "models", "the package name for the generated files")
 
 	// output settings
 	generatePKGetters = flag.Bool("pk", true, "generate pk select methods, defaults to true")
@@ -46,6 +49,7 @@ func main() {
 		DbPass: *dbPass,
 
 		OutputFolder: *outputFolder,
+		PackageName:  *packageName,
 
 		GeneratePKGetters:   *generatePKGetters,
 		GenerateGuidGetters: *generateGuidGetters}
@@ -70,8 +74,14 @@ func main() {
 		}
 	}()
 
+	// start collecting db info
+	options.Collect()
+
 	// start generating
 	options.Generate()
+
+	// start writing to files
+	options.WriteFiles()
 
 }
 

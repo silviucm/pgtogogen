@@ -22,36 +22,8 @@ type Table struct {
 	GoFriendlyName string
 
 	GoTypesToImport map[string]string
-}
 
-func (tbl *Table) GenerateTableStruct() {
-
-	fmt.Println("--------------------------------------------------------------------------------------------")
-	log.Println("Beginning generation for table: ", tbl.TableName)
-	fmt.Println("--------------------------------------------------------------------------------------------")
-
-	tmpl, err := template.New("tableTemplate").Parse(TABLE_TEMPLATE)
-	if err != nil {
-		log.Fatal("GenerateTableStruct() fatal error running template.New:", err)
-	}
-
-	//
-
-	var generatedTemplate bytes.Buffer
-	err = tmpl.Execute(&generatedTemplate, tbl)
-	if err != nil {
-		log.Fatal("GenerateTableStruct() fatal error running template.Execute:", err)
-	}
-
-	var filePath string = tbl.Options.OutputFolder + "/" + cmsutils.String.CamelCase(tbl.GoFriendlyName) + ".go"
-
-	err = ioutil.WriteFile(filePath, generatedTemplate.Bytes(), 0644)
-	if err != nil {
-		log.Fatal("GenerateTableStruct() fatal error writing to file:", err)
-	}
-
-	fmt.Println("Finished generating structures for table. Filepath: " + filePath)
-
+	GeneratedTemplate string
 }
 
 func (tbl *Table) CollectColumns() error {
@@ -92,6 +64,8 @@ func (tbl *Table) CollectColumns() error {
 			Nullable:     DecodeNullable(isNullable),
 			MaxLength:    DecodeMaxLength(charMaxLength),
 
+			IsCompositePK: false, IsPK: false, IsFK: false,
+
 			GoName: GetGoFriendlyNameForColumn(currentColumnName),
 			GoType: resolvedGoType,
 
@@ -109,4 +83,109 @@ func (tbl *Table) CollectColumns() error {
 
 	return nil
 
+}
+
+func (tbl *Table) CollectPrimaryKeys() error {
+
+	var currentConstraintName, currentColumnName string
+	var ordinalPosition int
+
+	var pkQuery = `SELECT kcu.constraint_name,
+         kcu.column_name,
+         kcu.ordinal_position
+			FROM    INFORMATION_SCHEMA.TABLES t
+			         LEFT JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc
+			                 ON tc.table_catalog = t.table_catalog
+			                 AND tc.table_schema = t.table_schema
+			                 AND tc.table_name = t.table_name
+			                 AND tc.constraint_type = 'PRIMARY KEY'
+			         LEFT JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE kcu
+			                 ON kcu.table_catalog = tc.table_catalog
+			                 AND kcu.table_schema = tc.table_schema
+			                 AND kcu.table_name = tc.table_name
+			                 AND kcu.constraint_name = tc.constraint_name
+			WHERE   t.table_schema NOT IN ('pg_catalog', 'information_schema') AND t.table_catalog = $1 AND t.table_name = $2
+			ORDER BY t.table_catalog,
+			         t.table_schema,
+			         t.table_name,
+			         kcu.constraint_name,
+			         kcu.ordinal_position;`
+
+	rows, err := tbl.DbHandle.Query(pkQuery, tbl.Options.DbName, tbl.TableName)
+
+	if err != nil {
+		log.Fatal("CollectPrimaryKeys() fatal error running the query:", err)
+	}
+	defer rows.Close()
+
+	var numberOfPKs int = 0
+
+	for rows.Next() {
+		err := rows.Scan(&currentConstraintName, &currentColumnName, &ordinalPosition)
+		if err != nil {
+			log.Fatal("CollectPrimaryKeys() fatal error inside rows.Next() iteration: ", err)
+		}
+
+		if tbl.Columns == nil {
+			log.Fatal("CollectPrimaryKeys() FATAL: nil Columns slice in this Table struct instance. Make sure you call CollectColumns() before this method.")
+		}
+
+		for i := range tbl.Columns {
+			if tbl.Columns[i].Name == currentColumnName {
+				tbl.Columns[i].IsPK = true
+				tbl.Columns[i].IsCompositePK = false
+				numberOfPKs = numberOfPKs + 1
+			}
+		}
+
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// if we have more than one PK we need to iterate again and set the
+	// composite PK flag wherever IsPK is true
+	if numberOfPKs > 1 {
+		for i := range tbl.Columns {
+			if tbl.Columns[i].IsPK == true {
+				tbl.Columns[i].IsCompositePK = true
+			}
+		}
+	}
+
+	return nil
+
+}
+
+func (tbl *Table) GenerateTableStruct() {
+
+	tmpl, err := template.New("tableTemplate").Parse(TABLE_TEMPLATE)
+	if err != nil {
+		log.Fatal("GenerateTableStruct() fatal error running template.New:", err)
+	}
+
+	var generatedTemplate bytes.Buffer
+	err = tmpl.Execute(&generatedTemplate, tbl)
+	if err != nil {
+		log.Fatal("GenerateTableStruct() fatal error running template.Execute:", err)
+	}
+
+	tbl.GeneratedTemplate = tbl.GeneratedTemplate + generatedTemplate.String()
+
+	fmt.Println("Table structure generated.")
+
+}
+
+func (tbl *Table) WriteToFile() {
+
+	var filePath string = tbl.Options.OutputFolder + "/" + cmsutils.String.CamelCase(tbl.GoFriendlyName) + ".go"
+
+	err := ioutil.WriteFile(filePath, []byte(tbl.GeneratedTemplate), 0644)
+	if err != nil {
+		log.Fatal("WriteToFile() fatal error writing to file:", err)
+	}
+
+	fmt.Println("Finished generating structures for table " + tbl.TableName + ". Filepath: " + filePath)
 }

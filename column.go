@@ -18,6 +18,11 @@ type Column struct {
 	DefaultValue sql.NullString
 	Nullable     bool
 
+	IsPK          bool
+	IsCompositePK bool
+
+	IsFK bool
+
 	GoName string
 	GoType string
 

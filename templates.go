@@ -1,6 +1,6 @@
 package main
 
-const TABLE_TEMPLATE = `package main
+const TABLE_TEMPLATE = `package {{.Options.PackageName}}
 
 import (
 	"database/sql"
@@ -12,6 +12,6 @@ import (
 const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.TableName}}"
 
 type {{.GoFriendlyName}} struct {
-	{{range .Columns}}{{.GoName}} {{.GoType}}
+	{{range .Columns}}{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
 	{{end}}	
 }`

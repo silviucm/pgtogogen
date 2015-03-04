@@ -18,6 +18,8 @@ type ToolOptions struct {
 
 	OutputFolder string
 
+	PackageName string
+
 	GeneratePKGetters   bool
 	GenerateGuidGetters bool
 
@@ -58,13 +60,13 @@ func (t *ToolOptions) InitDatabase() (*sql.DB, error) {
 
 }
 
-func (t *ToolOptions) Generate() {
+func (t *ToolOptions) Collect() {
 
 	fmt.Println("--------------------------------------------------------------------------------------------")
-	log.Println("Beginning generation. Destination folder: ", t.OutputFolder)
+	log.Println("Beginning collection of info from the database...")
 	fmt.Println("--------------------------------------------------------------------------------------------")
 
-	// let's collect all the user tables from the database
+	// collect all the user tables from the database
 	fmt.Print("Collecting tables...")
 	if err := t.CollectTables(); err != nil {
 		log.Fatal("Generate(): CollectTables fatal error: ", err)
@@ -73,8 +75,51 @@ func (t *ToolOptions) Generate() {
 	// iterate through each table and generate the struct
 	if t.Tables != nil {
 		fmt.Println("Done: Found " + strconv.Itoa(len(t.Tables)) + " tables.")
+	} else {
+		fmt.Println("Done: No tables found.")
+	}
+}
+
+func (t *ToolOptions) Generate() {
+
+	fmt.Println("--------------------------------------------------------------------------------------------")
+	log.Println("Beginning generation of structures")
+	fmt.Println("--------------------------------------------------------------------------------------------")
+
+	// iterate through each table and generate anything related
+	if t.Tables != nil {
+
 		for i := range t.Tables {
+
+			fmt.Println("--------------------------------------------------------------------------------------------")
+			log.Println("Beginning generation for table: ", t.Tables[i].TableName)
+			fmt.Println("--------------------------------------------------------------------------------------------")
+
+			// generate the table structure
 			t.Tables[i].GenerateTableStruct()
+
+			// generate the queries by PK
+		}
+	} else {
+		fmt.Println("Done: No tables found.")
+	}
+
+}
+
+func (t *ToolOptions) WriteFiles() {
+
+	fmt.Println("--------------------------------------------------------------------------------------------")
+	log.Println("Writing to files. Destination folder: ", t.OutputFolder)
+	fmt.Println("--------------------------------------------------------------------------------------------")
+
+	// iterate through each table and generate anything related
+	if t.Tables != nil {
+
+		for i := range t.Tables {
+
+			// generate the table structure
+			t.Tables[i].WriteToFile()
+
 		}
 	} else {
 		fmt.Println("Done: No tables found.")
@@ -113,6 +158,11 @@ func (t *ToolOptions) CollectTables() error {
 		// colect all the column info
 		if err := currentTable.CollectColumns(); err != nil {
 			log.Fatal("CollectTables(): CollectColumns method for table ", currentTable.TableName, " FATAL error: ", err)
+		}
+
+		// collect the primary keys for the table
+		if err := currentTable.CollectPrimaryKeys(); err != nil {
+			log.Fatal("CollectTables(): CollectPrimaryKeys method for table ", currentTable.TableName, " FATAL error: ", err)
 		}
 
 		// add the table to the slice
