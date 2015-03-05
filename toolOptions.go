@@ -187,11 +187,12 @@ func (t *ToolOptions) CollectTables() error {
 
 		// instantiate a table struct
 		currentTable := &Table{
-			TableName:         currentTableName,
-			GoFriendlyName:    GetGoFriendlyNameForTable(currentTableName),
-			DbHandle:          t.DbHandle,
-			Options:           t,
-			GeneratedTemplate: bytes.Buffer{},
+			TableName:          currentTableName,
+			GoFriendlyName:     GetGoFriendlyNameForTable(currentTableName),
+			DbHandle:           t.DbHandle,
+			Options:            t,
+			GeneratedTemplate:  bytes.Buffer{},
+			GenericSelectQuery: "",
 		}
 
 		currentTable.GoTypesToImport = make(map[string]string)
@@ -206,6 +207,9 @@ func (t *ToolOptions) CollectTables() error {
 		if err := currentTable.CollectPrimaryKeys(); err != nil {
 			log.Fatal("CollectTables(): CollectPrimaryKeys method for table ", currentTable.TableName, " FATAL error: ", err)
 		}
+
+		// generate the typical select sql queries
+		currentTable.CreateGenericQueries()
 
 		// add the table to the slice
 		t.Tables = append(t.Tables, *currentTable)

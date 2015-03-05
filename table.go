@@ -24,6 +24,9 @@ type Table struct {
 	GoTypesToImport map[string]string
 
 	GeneratedTemplate bytes.Buffer
+
+	// holds a typical SELECT FROM with all the db columns without any WHERE condition
+	GenericSelectQuery string
 }
 
 func (tbl *Table) CollectColumns() error {
@@ -156,6 +159,14 @@ func (tbl *Table) CollectPrimaryKeys() error {
 		}
 	}
 
+	// in case we generate the PK Getter function, we need to make sure the "database/sql" type is
+	// imported inside the generated template
+	// the generated function will make use of comparisons, such as
+	// case err == sql.ErrNoRows
+	if tbl.Options.GeneratePKGetters {
+		tbl.AddGoTypeToImport("database/sql")
+	}
+
 	return nil
 
 }
@@ -210,6 +221,52 @@ func (tbl *Table) CollectForeignKeys() error {
 	}
 
 	return nil
+}
+
+func (tbl *Table) AddGoTypeToImport(goTypeToImport string) {
+
+	if tbl.GoTypesToImport == nil {
+		tbl.GoTypesToImport = make(map[string]string)
+	}
+
+	tbl.GoTypesToImport[goTypeToImport] = goTypeToImport
+}
+
+func (tbl *Table) CreateGenericQueries() {
+
+	// BEGIN Create the generic SELECT query
+	if tbl.Columns != nil {
+		genericSelectQueryBuffer := bytes.Buffer{}
+		_, writeErr := genericSelectQueryBuffer.WriteString("SELECT ")
+		if writeErr != nil {
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericSelectQuery for table ", tbl.TableName, ": ", writeErr)
+		}
+
+		var totalNumberOfColumns int = len(tbl.Columns) - 1
+		var colNameToWriteToBuffer string = ""
+
+		for colRange := range tbl.Columns {
+
+			if totalNumberOfColumns == colRange {
+				colNameToWriteToBuffer = tbl.Columns[colRange].Name
+			} else {
+				colNameToWriteToBuffer = tbl.Columns[colRange].Name + ", "
+			}
+
+			_, writeErr = genericSelectQueryBuffer.WriteString(colNameToWriteToBuffer)
+			if writeErr != nil {
+				log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericSelectQuery for table ", tbl.TableName, ": ", writeErr)
+			}
+		}
+
+		_, writeErr = genericSelectQueryBuffer.WriteString(" FROM " + tbl.TableName + " ")
+		if writeErr != nil {
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericSelectQuery for table ", tbl.TableName, ": ", writeErr)
+		}
+		tbl.GenericSelectQuery = genericSelectQueryBuffer.String()
+	}
+	// END Create the generic SELECT query
+
 }
 
 func (tbl *Table) GenerateTableStruct() {

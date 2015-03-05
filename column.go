@@ -38,7 +38,13 @@ func (col *Column) GeneratePKGetter(parentTable *Table) []byte {
 
 	col.ParentTable = parentTable
 
-	tmpl, err := template.New("pkGetterTemplate").Parse(PK_GETTER_TEMPLATE)
+	var fns = template.FuncMap{
+		"plus1": func(x int) int {
+			return x + 1
+		},
+	}
+
+	tmpl, err := template.New("pkGetterTemplate").Funcs(fns).Parse(PK_GETTER_TEMPLATE)
 	if err != nil {
 		log.Fatal("GeneratePKGetter() fatal error running template.New:", err)
 	}
@@ -76,12 +82,12 @@ func GetGoFriendlyNameForColumn(columnName string) string {
 	return strings.Join(subNames, "")
 }
 
-func GetGoTypeForColumn(udtType string) (typeReturn string, goTypeToImport string) {
+func GetGoTypeForColumn(columnType string) (typeReturn string, goTypeToImport string) {
 
 	typeReturn = ""
 	goTypeToImport = ""
 
-	switch udtType {
+	switch columnType {
 	case "character varying":
 		typeReturn = "string"
 	case "integer":
