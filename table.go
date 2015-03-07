@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	_ "github.com/lib/pq"
-	cmsutils "github.com/silviucm/utils"
 	"io/ioutil"
 	"log"
 	"text/template"
@@ -292,7 +291,7 @@ func (tbl *Table) GenerateTableStruct() {
 
 func (tbl *Table) WriteToFile() {
 
-	var filePath string = tbl.Options.OutputFolder + "/" + cmsutils.String.CamelCase(tbl.GoFriendlyName) + ".go"
+	var filePath string = tbl.Options.OutputFolder + "/" + CamelCase(tbl.GoFriendlyName) + ".go"
 
 	err := ioutil.WriteFile(filePath, tbl.GeneratedTemplate.Bytes(), 0644)
 	if err != nil {
@@ -300,4 +299,35 @@ func (tbl *Table) WriteToFile() {
 	}
 
 	fmt.Println("Finished generating structures for table " + tbl.TableName + ". Filepath: " + filePath)
+}
+
+// This method only creates the custom file if it is not already in the folder.
+// Custom files are ideal to place your own methods in addition to the auto-generated ones.
+// If the generated files is named user.go, the custom file would be named: user-custom.go
+func (tbl *Table) WriteToCustomFile() {
+
+	tmpl, err := template.New("tableTemplateCustom").Parse(TABLE_TEMPLATE_CUSTOM)
+	if err != nil {
+		log.Fatal("WriteToCustomFile() fatal error running template.New for TABLE_TEMPLATE_CUSTOM:", err)
+	}
+
+	var generatedCustomFileTemplate bytes.Buffer
+	err = tmpl.Execute(&generatedCustomFileTemplate, tbl)
+	if err != nil {
+		log.Fatal("WriteToCustomFile() fatal error running template.Execute:", err)
+	}
+
+	var customFilePath string = tbl.Options.OutputFolder + "/" + CamelCase(tbl.GoFriendlyName) + "-custom.go"
+
+	if FileExists(customFilePath) {
+		fmt.Println("Skipping generating custom file for table " + tbl.TableName + ". Filepath: " + customFilePath + " already exists.")
+	} else {
+		err := ioutil.WriteFile(customFilePath, generatedCustomFileTemplate.Bytes(), 0644)
+		if err != nil {
+			log.Fatal("WriteToCustomFile() fatal error writing to file:", err)
+		}
+
+		fmt.Println("Finished generating custom file for table " + tbl.TableName + ". Filepath: " + customFilePath)
+	}
+
 }

@@ -135,6 +135,10 @@ func (t *ToolOptions) WriteFiles() {
 			// generate the table structure
 			t.Tables[i].WriteToFile()
 
+			// generate one-time only custom files
+			// if they are already present, they will be skipped
+			t.Tables[i].WriteToCustomFile()
+
 		}
 	} else {
 		fmt.Println("Done: No tables found.")
