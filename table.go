@@ -136,6 +136,7 @@ func (tbl *Table) CollectPrimaryKeys() error {
 
 	var numberOfPKs int = 0
 
+	pkColumnsString := ""
 	for rows.Next() {
 		err := rows.Scan(&currentConstraintName, &currentColumnName, &ordinalPosition)
 		if err != nil {
@@ -145,8 +146,6 @@ func (tbl *Table) CollectPrimaryKeys() error {
 		if tbl.Columns == nil {
 			log.Fatal("CollectPrimaryKeys() FATAL: nil Columns slice in this Table struct instance. Make sure you call CollectColumns() before this method.")
 		}
-
-		pkColumnsString := ""
 
 		for i := range tbl.Columns {
 			if tbl.Columns[i].Name == currentColumnName {
@@ -162,15 +161,14 @@ func (tbl *Table) CollectPrimaryKeys() error {
 			}
 		}
 
-		// just in case ignoring sequence columns happened to produce a situation where there is a
-		// comma followed by space at the end of the string, let's strip it
-		if strings.HasSuffix(pkColumnsString, ", ") {
-			pkColumnsString = strings.TrimSuffix(pkColumnsString, ", ")
-		}
-
-		tbl.PKColumnsString = pkColumnsString
-
 	}
+
+	// just in case ignoring sequence columns happened to produce a situation where there is a
+	// comma followed by space at the end of the string, let's strip it
+	if strings.HasSuffix(pkColumnsString, ", ") {
+		pkColumnsString = strings.TrimSuffix(pkColumnsString, ", ")
+	}
+	tbl.PKColumnsString = pkColumnsString
 
 	err = rows.Err()
 	if err != nil {
