@@ -37,12 +37,6 @@ func (col *Column) GeneratePKGetter(parentTable *Table) []byte {
 
 	col.ParentTable = parentTable
 
-	var fns = template.FuncMap{
-		"plus1": func(x int) int {
-			return x + 1
-		},
-	}
-
 	tmpl, err := template.New("pkGetterTemplate").Funcs(fns).Parse(PK_GETTER_TEMPLATE)
 	if err != nil {
 		log.Fatal("GeneratePKGetter() fatal error running template.New:", err)

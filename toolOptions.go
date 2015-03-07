@@ -101,6 +101,9 @@ func (t *ToolOptions) Generate() {
 			// generate the table structure
 			t.Tables[i].GenerateTableStruct()
 
+			// generate the insert-related functions
+			t.Tables[i].GenerateInsertFunctions()
+
 			// generate the queries by PK
 			if t.GeneratePKGetters == true {
 				fmt.Println("Generating Primary Key Accessor Methods...")
@@ -197,6 +200,11 @@ func (t *ToolOptions) CollectTables() error {
 			Options:            t,
 			GeneratedTemplate:  bytes.Buffer{},
 			GenericSelectQuery: "",
+			GenericInsertQuery: "",
+
+			ColumnsString:   "",
+			PKColumnsString: "",
+			FKColumnsString: "",
 		}
 
 		currentTable.GoTypesToImport = make(map[string]string)

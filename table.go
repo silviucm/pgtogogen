@@ -7,6 +7,8 @@ import (
 	_ "github.com/lib/pq"
 	"io/ioutil"
 	"log"
+	"strconv"
+	"strings"
 	"text/template"
 )
 
@@ -16,7 +18,15 @@ type Table struct {
 	Options  *ToolOptions
 	DbHandle *sql.DB
 
-	Columns        []Column
+	Columns       []Column
+	ColumnsString string
+
+	PKColumns       []Column
+	PKColumnsString string
+
+	FKColumns       []Column
+	FKColumnsString string
+
 	TableName      string
 	GoFriendlyName string
 
@@ -26,6 +36,9 @@ type Table struct {
 
 	// holds a typical SELECT FROM with all the db columns without any WHERE condition
 	GenericSelectQuery string
+
+	// holds a typical INSERT query, postgres style
+	GenericInsertQuery string
 }
 
 func (tbl *Table) CollectColumns() error {
@@ -133,13 +146,29 @@ func (tbl *Table) CollectPrimaryKeys() error {
 			log.Fatal("CollectPrimaryKeys() FATAL: nil Columns slice in this Table struct instance. Make sure you call CollectColumns() before this method.")
 		}
 
+		pkColumnsString := ""
+
 		for i := range tbl.Columns {
 			if tbl.Columns[i].Name == currentColumnName {
 				tbl.Columns[i].IsPK = true
 				tbl.Columns[i].IsCompositePK = false
 				numberOfPKs = numberOfPKs + 1
+
+				// add this column to the tables's PK columns slice
+				tbl.PKColumns = append(tbl.PKColumns, tbl.Columns[i])
+
+				// and to the pk columns string
+				pkColumnsString = pkColumnsString + currentColumnName + ", "
 			}
 		}
+
+		// just in case ignoring sequence columns happened to produce a situation where there is a
+		// comma followed by space at the end of the string, let's strip it
+		if strings.HasSuffix(pkColumnsString, ", ") {
+			pkColumnsString = strings.TrimSuffix(pkColumnsString, ", ")
+		}
+
+		tbl.PKColumnsString = pkColumnsString
 
 	}
 
@@ -209,6 +238,9 @@ func (tbl *Table) CollectForeignKeys() error {
 			if tbl.Columns[i].Name == currentColumnName {
 				tbl.Columns[i].IsFK = true
 				numberOfFKs = numberOfFKs + 1
+
+				// add this column to the tables's FK columns slice
+				tbl.FKColumns = append(tbl.PKColumns, tbl.Columns[i])
 			}
 		}
 
@@ -236,28 +268,21 @@ func (tbl *Table) CreateGenericQueries() {
 	// BEGIN Create the generic SELECT query
 	if tbl.Columns != nil {
 		genericSelectQueryBuffer := bytes.Buffer{}
+
+		// The SELECT prefix
 		_, writeErr := genericSelectQueryBuffer.WriteString("SELECT ")
 		if writeErr != nil {
 			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericSelectQuery for table ", tbl.TableName, ": ", writeErr)
 		}
 
-		var totalNumberOfColumns int = len(tbl.Columns) - 1
-		var colNameToWriteToBuffer string = ""
-
-		for colRange := range tbl.Columns {
-
-			if totalNumberOfColumns == colRange {
-				colNameToWriteToBuffer = tbl.Columns[colRange].Name
-			} else {
-				colNameToWriteToBuffer = tbl.Columns[colRange].Name + ", "
-			}
-
-			_, writeErr = genericSelectQueryBuffer.WriteString(colNameToWriteToBuffer)
-			if writeErr != nil {
-				log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericSelectQuery for table ", tbl.TableName, ": ", writeErr)
-			}
+		// the column names, comma-separated
+		var ignoreSerialColumns bool = true
+		_, writeErr = genericSelectQueryBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns))
+		if writeErr != nil {
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names for table (select) ", tbl.TableName, ": ", writeErr)
 		}
 
+		// The FROM section
 		_, writeErr = genericSelectQueryBuffer.WriteString(" FROM " + tbl.TableName + " ")
 		if writeErr != nil {
 			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericSelectQuery for table ", tbl.TableName, ": ", writeErr)
@@ -266,6 +291,119 @@ func (tbl *Table) CreateGenericQueries() {
 	}
 	// END Create the generic SELECT query
 
+	// BEGIN Create the generic INSERT query
+	if tbl.Columns != nil {
+		genericInsertQueryBuffer := bytes.Buffer{}
+
+		// The INSERT prefix
+		_, writeErr := genericInsertQueryBuffer.WriteString("INSERT INTO " + tbl.TableName + "(")
+		if writeErr != nil {
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery for table ", tbl.TableName, ": ", writeErr)
+		}
+
+		// the column names, comma-separated
+		var ignoreSerialColumns bool = true
+		_, writeErr = genericInsertQueryBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns))
+		if writeErr != nil {
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names for table (insert) ", tbl.TableName, ": ", writeErr)
+		}
+
+		// The VALUES section
+		_, writeErr = genericInsertQueryBuffer.WriteString(") VALUES(" + tbl.getSqlFriendlyParameters(ignoreSerialColumns) + ") ")
+		if writeErr != nil {
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery for table ", tbl.TableName, ": ", writeErr)
+		}
+		tbl.GenericInsertQuery = genericInsertQueryBuffer.String()
+	}
+	// END Create the generic INSERT query
+
+}
+
+// returns a string of comma separated database column names, as they are used in SELECT
+// or INSERT sql statements (e.g. "username, first_name, last_name")
+// if ignoreSequenceColumns is true, it checks which columns are auto-generated via
+// sequences and does not include those.
+func (tbl *Table) getSqlFriendlyColumnList(ignoreSequenceColumns bool) string {
+
+	genericQueryFriendlyColumnsBuffer := bytes.Buffer{}
+
+	var totalNumberOfColumns int = len(tbl.Columns) - 1
+	var colNameToWriteToBuffer string = ""
+
+	for colRange := range tbl.Columns {
+
+		if ignoreSequenceColumns == true && tbl.Columns[colRange].IsSequence == true {
+			continue
+		}
+
+		if totalNumberOfColumns == colRange {
+			colNameToWriteToBuffer = tbl.Columns[colRange].Name
+		} else {
+			colNameToWriteToBuffer = tbl.Columns[colRange].Name + ", "
+		}
+
+		_, writeErr := genericQueryFriendlyColumnsBuffer.WriteString(colNameToWriteToBuffer)
+		if writeErr != nil {
+			log.Fatal("Table.getSqlFriendlyColumnList(): FATAL error writing to buffer when generating column names for table ", tbl.TableName, ": ", writeErr)
+		}
+	}
+
+	finalString := genericQueryFriendlyColumnsBuffer.String()
+
+	// just in case ignoring sequence columns happened to produce a situation where there is a
+	// comma followed by space at the end of the string, let's strip it
+	if strings.HasSuffix(finalString, ", ") {
+		finalString = strings.TrimSuffix(finalString, ", ")
+	}
+
+	return finalString
+}
+
+// Returns a string of comma separated parameters, incremented by 1, Postgres style,
+// but taking into account if some columns are have default sequence autogeneration,
+// hence should not be inserted
+func (tbl *Table) getSqlFriendlyParameters(ignoreSequenceColumns bool) string {
+
+	genericQueryFriendlyParamsBuffer := bytes.Buffer{}
+
+	var totalNumberOfColumns int = len(tbl.Columns) - 1
+	var paramToWriteToBuffer string = ""
+
+	var realParamCount int = 1
+
+	for colRange := range tbl.Columns {
+
+		if ignoreSequenceColumns == true && tbl.Columns[colRange].IsSequence == true {
+			continue
+		}
+
+		// we cannot rely on the colRange iterator because we may skip columns
+		// which are sequence based, so we would have a situation such as
+		// "$1, $3, $4, etc" with $2 missing due to the continue statement above
+		var currentParamCount string = "$" + strconv.Itoa(realParamCount)
+		realParamCount = realParamCount + 1
+
+		if totalNumberOfColumns == colRange {
+			paramToWriteToBuffer = currentParamCount
+		} else {
+			paramToWriteToBuffer = currentParamCount + ", "
+		}
+
+		_, writeErr := genericQueryFriendlyParamsBuffer.WriteString(paramToWriteToBuffer)
+		if writeErr != nil {
+			log.Fatal("Table.getSqlFriendlyParameters(): FATAL error writing to buffer when generating params for table ", tbl.TableName, ": ", writeErr)
+		}
+	}
+
+	finalString := genericQueryFriendlyParamsBuffer.String()
+
+	// just in case ignoring sequence columns happened to produce a situation where there is a
+	// comma followed by space at the end of the string, let's strip it
+	if strings.HasSuffix(finalString, ", ") {
+		finalString = strings.TrimSuffix(finalString, ", ")
+	}
+
+	return finalString
 }
 
 func (tbl *Table) GenerateTableStruct() {
@@ -286,6 +424,27 @@ func (tbl *Table) GenerateTableStruct() {
 	}
 
 	fmt.Println("Table structure generated.")
+
+}
+
+func (tbl *Table) GenerateInsertFunctions() {
+
+	tmpl, err := template.New("tableInsertFunctionTemplate").Funcs(fns).Parse(TABLE_INSERT_TEMPLATE)
+	if err != nil {
+		log.Fatal("GenerateInsertFunctions() fatal error running template.New:", err)
+	}
+
+	var generatedTemplate bytes.Buffer
+	err = tmpl.Execute(&generatedTemplate, tbl)
+	if err != nil {
+		log.Fatal("GenerateInsertFunctions() fatal error running template.Execute:", err)
+	}
+
+	if _, err = tbl.GeneratedTemplate.Write(generatedTemplate.Bytes()); err != nil {
+		log.Fatal("GenerateInsertFunctions() fatal error writing the generated template bytes to the table buffer:", err)
+	}
+
+	fmt.Println("Table insert functions generated.")
 
 }
 
