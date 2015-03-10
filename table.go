@@ -222,6 +222,7 @@ func (tbl *Table) CollectForeignKeys() error {
 
 	var numberOfFKs int = 0
 
+	fkColumnsString := ""
 	for rows.Next() {
 		err := rows.Scan(&currentConstraintName, &currentColumnName, &foreignTableName, &foreignColumnName)
 		if err != nil {
@@ -239,14 +240,32 @@ func (tbl *Table) CollectForeignKeys() error {
 
 				// add this column to the tables's FK columns slice
 				tbl.FKColumns = append(tbl.FKColumns, tbl.Columns[i])
+
+				// and to the fk columns string
+				fkColumnsString = fkColumnsString + currentColumnName + ", "
 			}
 		}
 
 	}
 
+	// just in case ignoring sequence columns happened to produce a situation where there is a
+	// comma followed by space at the end of the string, let's strip it
+	if strings.HasSuffix(fkColumnsString, ", ") {
+		fkColumnsString = strings.TrimSuffix(fkColumnsString, ", ")
+	}
+	tbl.FKColumnsString = fkColumnsString
+
 	err = rows.Err()
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	// in case we generate the FK Getter function, we need to make sure the "database/sql" type is
+	// imported inside the generated template
+	// the generated function will make use of comparisons, such as
+	// case err == sql.ErrNoRows
+	if tbl.Options.GenerateGuidGetters {
+		tbl.AddGoTypeToImport("database/sql")
 	}
 
 	return nil
