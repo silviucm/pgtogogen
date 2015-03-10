@@ -238,7 +238,7 @@ func (tbl *Table) CollectForeignKeys() error {
 				numberOfFKs = numberOfFKs + 1
 
 				// add this column to the tables's FK columns slice
-				tbl.FKColumns = append(tbl.PKColumns, tbl.Columns[i])
+				tbl.FKColumns = append(tbl.FKColumns, tbl.Columns[i])
 			}
 		}
 
