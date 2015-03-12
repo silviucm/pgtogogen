@@ -2,9 +2,8 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
+	"github.com/silviucm/pgx"
 	"io/ioutil"
 	"log"
 	"strconv"
@@ -15,8 +14,8 @@ import (
 /* Table Section */
 
 type Table struct {
-	Options  *ToolOptions
-	DbHandle *sql.DB
+	Options        *ToolOptions
+	ConnectionPool *pgx.ConnPool
 
 	Columns       []Column
 	ColumnsString string
@@ -44,10 +43,10 @@ type Table struct {
 func (tbl *Table) CollectColumns() error {
 
 	var currentColumnName, isNullable, dataType string
-	var columnDefault sql.NullString
-	var charMaxLength sql.NullInt64
+	var columnDefault pgx.NullString
+	var charMaxLength pgx.NullInt32
 
-	rows, err := tbl.DbHandle.Query("SELECT column_name, column_default, is_nullable, data_type, character_maximum_length FROM information_schema.columns "+
+	rows, err := tbl.ConnectionPool.Query("SELECT column_name, column_default, is_nullable, data_type, character_maximum_length FROM information_schema.columns "+
 		" WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position;", tbl.TableName)
 
 	if err != nil {
@@ -85,8 +84,8 @@ func (tbl *Table) CollectColumns() error {
 			GoName: GetGoFriendlyNameForColumn(currentColumnName),
 			GoType: resolvedGoType,
 
-			DbHandle: tbl.DbHandle,
-			Options:  tbl.Options,
+			ConnectionPool: tbl.ConnectionPool,
+			Options:        tbl.Options,
 		}
 
 		tbl.Columns = append(tbl.Columns, *currentColumn)
@@ -104,7 +103,7 @@ func (tbl *Table) CollectColumns() error {
 func (tbl *Table) CollectPrimaryKeys() error {
 
 	var currentConstraintName, currentColumnName string
-	var ordinalPosition int
+	var ordinalPosition int32
 
 	var pkQuery = `SELECT kcu.constraint_name,
          kcu.column_name,
@@ -127,7 +126,7 @@ func (tbl *Table) CollectPrimaryKeys() error {
 			         kcu.constraint_name,
 			         kcu.ordinal_position;`
 
-	rows, err := tbl.DbHandle.Query(pkQuery, tbl.Options.DbName, tbl.TableName)
+	rows, err := tbl.ConnectionPool.Query(pkQuery, tbl.Options.DbName, tbl.TableName)
 
 	if err != nil {
 		log.Fatal("CollectPrimaryKeys() fatal error running the query:", err)
@@ -213,7 +212,7 @@ func (tbl *Table) CollectForeignKeys() error {
 		      ON ccu.constraint_name = tc.constraint_name
 		WHERE constraint_type = 'FOREIGN KEY' AND tc.table_catalog=$1 AND tc.table_name=$2 ;`
 
-	rows, err := tbl.DbHandle.Query(fkQuery, tbl.Options.DbName, tbl.TableName)
+	rows, err := tbl.ConnectionPool.Query(fkQuery, tbl.Options.DbName, tbl.TableName)
 
 	if err != nil {
 		log.Fatal("CollectForeignKeys() fatal error running the query:", err)

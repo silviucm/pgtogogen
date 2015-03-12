@@ -2,8 +2,8 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
+	"github.com/silviucm/pgx"
 	"log"
 	"text/template"
 )
@@ -11,14 +11,14 @@ import (
 /* Column Section */
 
 type Column struct {
-	Options     *ToolOptions
-	DbHandle    *sql.DB
-	ParentTable *Table
+	Options        *ToolOptions
+	ConnectionPool *pgx.ConnPool
+	ParentTable    *Table
 
 	Name         string
 	Type         string
 	MaxLength    int
-	DefaultValue sql.NullString
+	DefaultValue pgx.NullString
 	Nullable     bool
 	IsSequence   bool
 

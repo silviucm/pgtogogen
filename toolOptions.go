@@ -2,9 +2,8 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
 	"fmt"
-	_ "github.com/lib/pq"
+	"github.com/silviucm/pgx"
 	"io/ioutil"
 	"log"
 	"strconv"
@@ -14,7 +13,7 @@ import (
 
 type ToolOptions struct {
 	DbHost string
-	DbPort string
+	DbPort uint16
 	DbName string
 	DbUser string
 	DbPass string
@@ -26,40 +25,38 @@ type ToolOptions struct {
 	GeneratePKGetters   bool
 	GenerateGuidGetters bool
 
-	DbHandle *sql.DB
+	ConnectionPool *pgx.ConnPool
 
 	Tables []Table
 }
 
-func (t *ToolOptions) InitDatabase() (*sql.DB, error) {
+func (t *ToolOptions) InitDatabase() (*pgx.ConnPool, error) {
 
 	var successOrFailure string = "OK"
 
-	dburlPostgres := "user=" + t.DbUser + " password=" + t.DbPass + " host=" + t.DbHost + " dbname=" + t.DbName + " sslmode=disable"
+	var config pgx.ConnPoolConfig
 
-	dbHandle, err := sql.Open("postgres", dburlPostgres)
+	config.Host = t.DbHost
+	config.User = t.DbUser
+	config.Password = t.DbPass
+	config.Database = t.DbName
+	config.Port = t.DbPort
 
 	fmt.Println("--------------------------------------------------------------------------------------------")
 
+	connPool, err := pgx.NewConnPool(config)
 	if err != nil {
 		successOrFailure = "FAILED"
 		log.Println("Connecting to database ", t.DbName, " as user ", t.DbUser, " ", successOrFailure, ": \n ", err)
 	} else {
-		// since Open() doesn't always connect , we need to call Ping
-		err = dbHandle.Ping()
-		if err != nil {
-			successOrFailure = "FAILED AT PING"
-			log.Println("Connecting to database ", t.DbName, " as user ", t.DbUser, " ", successOrFailure, ": \n ", err)
-		} else {
-			log.Println("Connecting to database ", t.DbName, " as user ", t.DbUser, " ", successOrFailure)
-		}
+		log.Println("Connecting to database ", t.DbName, " as user ", t.DbUser, ": ", successOrFailure)
 	}
 
 	fmt.Println("--------------------------------------------------------------------------------------------")
 
-	t.DbHandle = dbHandle
+	t.ConnectionPool = connPool
 
-	return t.DbHandle, err
+	return t.ConnectionPool, err
 
 }
 
@@ -179,7 +176,7 @@ func (t *ToolOptions) CollectTables() error {
 
 	var currentTableName string
 
-	rows, err := t.DbHandle.Query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';")
+	rows, err := t.ConnectionPool.Query("SELECT table_name FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE';")
 
 	if err != nil {
 		log.Fatal(err)
@@ -196,7 +193,7 @@ func (t *ToolOptions) CollectTables() error {
 		currentTable := &Table{
 			TableName:          currentTableName,
 			GoFriendlyName:     GetGoFriendlyNameForTable(currentTableName),
-			DbHandle:           t.DbHandle,
+			ConnectionPool:     t.ConnectionPool,
 			Options:            t,
 			GeneratedTemplate:  bytes.Buffer{},
 			GenericSelectQuery: "",

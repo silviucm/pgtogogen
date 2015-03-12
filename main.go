@@ -5,12 +5,15 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strconv"
 )
 
 const ARGS_ERROR_HEADER string = "\n-------------------------\nARGUMENTS ERROR:\n-------------------------\n"
 
 var dbHost, dbPort, dbName, dbUser, dbPass, outputFolder, packageName *string
 var generatePKGetters, generateGuidGetters *bool
+
+var dbPortUInt16 uint16 = 5432
 
 func main() {
 
@@ -43,7 +46,7 @@ func main() {
 	// assign the options to a ToolOptions struct
 	options := &ToolOptions{
 		DbHost: *dbHost,
-		DbPort: *dbPort,
+		DbPort: dbPortUInt16,
 		DbName: *dbName,
 		DbUser: *dbUser,
 		DbPass: *dbPass,
@@ -102,6 +105,15 @@ func validateFlags() bool {
 
 	if *dbPass == "" {
 		flagParsingErrors = flagParsingErrors + "Missing database password flag -pass\n"
+	}
+
+	// make sure the port is uint
+	var portUInt16 int
+	portUInt16, err := strconv.Atoi(*dbPort)
+	if err != nil {
+		flagParsingErrors = flagParsingErrors + "Invalid database port (please specify a valid number)\n"
+	} else {
+		dbPortUInt16 = uint16(portUInt16)
 	}
 
 	if flagParsingErrors != "" {

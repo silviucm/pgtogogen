@@ -1,7 +1,7 @@
 package main
 
 import (
-	"database/sql"
+	"github.com/silviucm/pgx"
 	"log"
 	"strings"
 )
@@ -52,7 +52,7 @@ func GetGoTypeForColumn(columnType string) (typeReturn string, goTypeToImport st
 	return typeReturn, goTypeToImport
 }
 
-func DecodeIsColumnSequence(columnDefaultValue sql.NullString) bool {
+func DecodeIsColumnSequence(columnDefaultValue pgx.NullString) bool {
 
 	if columnDefaultValue.Valid == false {
 		return false
@@ -78,11 +78,11 @@ func DecodeNullable(isNullable string) bool {
 	return false
 }
 
-func DecodeMaxLength(maxLength sql.NullInt64) int {
+func DecodeMaxLength(maxLength pgx.NullInt32) int {
 
 	if maxLength.Valid == false {
 		return -1
 	}
 
-	return int(maxLength.Int64)
+	return int(maxLength.Int32)
 }
