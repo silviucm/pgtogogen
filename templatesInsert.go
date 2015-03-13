@@ -8,7 +8,7 @@ const TABLE_STATIC_INSERT_TEMPLATE = `{{$colCount := len .Columns}}{{$pkColCount
 // inside the pointer to a {{.GoFriendlyName}} structure passed to it.
 // Returns back the pointer to the structure with all the fields, including the PK fields.
 // If operation fails, it returns nil and the error
-func {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}) (*{{.GoFriendlyName}}, error) {
+func {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}) (*{{.GoFriendlyName}},  error) {
 						
 	var errorPrefix = "{{$functionName}}() ERROR: "
 
@@ -26,12 +26,30 @@ func {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}) (*{{.GoFriend
 	{{end}}
 
 	// define the select query
-	var query = "{{.GenericInsertQuery}} RETURNING {{.PKColumnsString}}";
+	var insertQueryAllColumns = "{{.GenericInsertQuery}} RETURNING {{.PKColumnsString}}";
+	var insertQueryNoPKColumns = "{{.GenericInsertQueryNoPK}} RETURNING {{.PKColumnsString}}";
+	
+	var query string = insertQueryAllColumns
+	
+	if {{$sourceStructName}}.PgToGo_Control_IgnorePKValuesWhenInsertingAndUseSequence {
+		query = insertQueryNoPKColumns
+	}
 
 	// pq does not support the LastInsertId() method of the Result type in database/sql. 
 	// To return the identifier of an INSERT (or UPDATE or DELETE), use the Postgres RETURNING clause 
 	// with a standard Query or QueryRow call
-	err := currentDbHandle.QueryRow(query, {{range $i, $e := .Columns}}{{$sourceStructName}}.{{.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}).Scan({{range $i, $e := .PKColumns}}&param{{.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}})
+	
+	var err error
+
+	// define the values to be passed, from the structure
+	var  {{.ColumnsString}} = {{range $i, $e := .Columns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
+	
+	if {{$sourceStructName}}.PgToGo_Control_IgnorePKValuesWhenInsertingAndUseSequence {
+		err = currentDbHandle.QueryRow(query, {{.ColumnsStringNoPK}}).Scan({{range $i, $e := .PKColumns}}&param{{.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}})		
+	} else {
+		err = currentDbHandle.QueryRow(query, {{.ColumnsString}}).Scan({{range $i, $e := .PKColumns}}&param{{.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}})
+	}
+		
     switch {
     case err == sql.ErrNoRows:
             // no such row found, return nil and nil

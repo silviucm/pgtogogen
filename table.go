@@ -17,8 +17,9 @@ type Table struct {
 	Options        *ToolOptions
 	ConnectionPool *pgx.ConnPool
 
-	Columns       []Column
-	ColumnsString string
+	Columns           []Column
+	ColumnsString     string
+	ColumnsStringNoPK string
 
 	PKColumns       []Column
 	PKColumnsString string
@@ -37,7 +38,12 @@ type Table struct {
 	GenericSelectQuery string
 
 	// holds a typical INSERT query, postgres style
-	GenericInsertQuery string
+	GenericInsertQuery     string
+	GenericInsertQueryNoPK string
+
+	// holds the parameters comma-separated
+	ParamString     string
+	ParamStringNoPK string
 }
 
 func (tbl *Table) CollectColumns() error {
@@ -94,6 +100,12 @@ func (tbl *Table) CollectColumns() error {
 	err = rows.Err()
 	if err != nil {
 		log.Fatal(err)
+	}
+
+	if tbl.Columns != nil {
+		// get all columns and all params string friendly
+		tbl.ColumnsString = tbl.getSqlFriendlyColumnList(false)
+		tbl.ParamString = tbl.getSqlFriendlyParameters(false)
 	}
 
 	return nil
@@ -191,6 +203,10 @@ func (tbl *Table) CollectPrimaryKeys() error {
 	if tbl.Options.GeneratePKGetters {
 		tbl.AddGoTypeToImport("database/sql")
 	}
+
+	// let's generate the PK-dependent strings properly
+	tbl.ColumnsString = tbl.getSqlFriendlyColumnList(false)
+	tbl.ColumnsStringNoPK = tbl.getSqlFriendlyColumnList(true)
 
 	return nil
 
@@ -309,27 +325,50 @@ func (tbl *Table) CreateGenericQueries() {
 
 	// BEGIN Create the generic INSERT query
 	if tbl.Columns != nil {
-		genericInsertQueryBuffer := bytes.Buffer{}
+		genericInsertQueryAllColumnsBuffer := bytes.Buffer{}
+		genericInsertQueryNonPKColumnsBuffer := bytes.Buffer{}
 
 		// The INSERT prefix
-		_, writeErr := genericInsertQueryBuffer.WriteString("INSERT INTO " + tbl.TableName + "(")
+		_, writeErr := genericInsertQueryNonPKColumnsBuffer.WriteString("INSERT INTO " + tbl.TableName + "(")
+		if writeErr != nil {
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery for table ", tbl.TableName, ": ", writeErr)
+		}
+
+		_, writeErr = genericInsertQueryAllColumnsBuffer.WriteString("INSERT INTO " + tbl.TableName + "(")
 		if writeErr != nil {
 			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery for table ", tbl.TableName, ": ", writeErr)
 		}
 
 		// the column names, comma-separated
 		var ignoreSerialColumns bool = true
-		_, writeErr = genericInsertQueryBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns))
+		_, writeErr = genericInsertQueryNonPKColumnsBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns))
 		if writeErr != nil {
-			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names for table (insert) ", tbl.TableName, ": ", writeErr)
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names (without pk) for table (insert) ", tbl.TableName, ": ", writeErr)
+		}
+
+		ignoreSerialColumns = false
+		_, writeErr = genericInsertQueryAllColumnsBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns))
+		if writeErr != nil {
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names (with pk) for table (insert) ", tbl.TableName, ": ", writeErr)
 		}
 
 		// The VALUES section
-		_, writeErr = genericInsertQueryBuffer.WriteString(") VALUES(" + tbl.getSqlFriendlyParameters(ignoreSerialColumns) + ") ")
+		ignoreSerialColumns = true
+		_, writeErr = genericInsertQueryNonPKColumnsBuffer.WriteString(") VALUES(" + tbl.getSqlFriendlyParameters(ignoreSerialColumns) + ") ")
 		if writeErr != nil {
-			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery for table ", tbl.TableName, ": ", writeErr)
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery (without pk) for table ", tbl.TableName, ": ", writeErr)
 		}
-		tbl.GenericInsertQuery = genericInsertQueryBuffer.String()
+
+		ignoreSerialColumns = false
+		_, writeErr = genericInsertQueryAllColumnsBuffer.WriteString(") VALUES(" + tbl.getSqlFriendlyParameters(ignoreSerialColumns) + ") ")
+		if writeErr != nil {
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery (with pk) for table ", tbl.TableName, ": ", writeErr)
+		}
+		tbl.GenericInsertQuery = genericInsertQueryAllColumnsBuffer.String()
+		tbl.GenericInsertQueryNoPK = genericInsertQueryNonPKColumnsBuffer.String()
+
+		tbl.ParamString = tbl.getSqlFriendlyParameters(false)
+		tbl.ParamStringNoPK = tbl.getSqlFriendlyParameters(true)
 	}
 	// END Create the generic INSERT query
 

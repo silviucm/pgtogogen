@@ -28,6 +28,7 @@ const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.TableName}}"
 type {{.GoFriendlyName}} struct {
 	{{range .Columns}}{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
 	{{end}}	
+	PgToGo_Control_IgnorePKValuesWhenInsertingAndUseSequence bool // set this to true if you want Inserts to ignore the PK fields
 }`
 
 const TABLE_TEMPLATE_CUSTOM = `package {{.Options.PackageName}}
