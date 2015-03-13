@@ -10,19 +10,93 @@ const BASE_TEMPLATE = `package {{.PackageName}}
 /* *********************************************************** */
 
 import (
-	"database/sql"
-	_ "github.com/lib/pq"	
+	"github.com/silviucm/pgx"	
 	"errors"
 )
 
-var dbHandle *sql.DB
+// If this flag is set to true, the system will panic if the database
+// connection cannot be made. Otherwise, GetDb() will simply return nil.
+const FLAG_PANIC_ON_INIT_DB_FAIL bool = true
 
-func GetDb() *sql.DB {
+var DB_HOST string = "localhost"
+var DB_PORT uint16 = 5432
+var DB_USER string = "testuser"
+var DB_PASS string = "testuser"
+var DB_NAME string = "testdb"
+var DB_POOL_MAX_CONNECTIONS int = 100
+
+var dbHandle *pgx.ConnPool
+
+func GetDb() *pgx.ConnPool {
+	
+	if dbHandle != nil {
+		return dbHandle
+	}
+
+	dbSettings := GetDefaultDbSettings()
+	newHandle, err := InitDatabase(dbSettings)
+	
+	if err != nil {
+		if FLAG_PANIC_ON_INIT_DB_FAIL {
+			panic("FORCED PANIC: models.GetDb() -> InitDatabase() fatal error connecting to the database: " + err.Error())
+		} else {
+			return nil
+		}
+	}
+	
+	dbHandle = newHandle	
 	return dbHandle
+	
 }
 
-func NewModelsError(errorMsg string) error {
-	return errors.New(errorMsg)
+// Returns a ConnPoolConfig structure.
+func GetDefaultDbSettings() pgx.ConnPoolConfig {
+	
+	var config pgx.ConnPoolConfig
+
+	config.Host = DB_HOST
+	config.User = DB_USER
+	config.Password = DB_PASS
+	config.Database = DB_NAME
+	config.Port = DB_PORT
+	config.MaxConnections = DB_POOL_MAX_CONNECTIONS
+	
+	return config
+	
+}
+
+// Minimally, the pgx.ConnPoolConfig expects these values to be set:
+//
+// config.Host = dbHostStringVar
+// config.User = dbUserStringVar
+// config.Password = dbPassStringVar
+// config.Database = dbNameStringVar
+// config.Port = dbPortUInt16Var
+//
+// You can use the GetDefaultDbSettings() and modify the variables at the beginning
+// of this class accordingly.
+func InitDatabase(dbConfig pgx.ConnPoolConfig) (*pgx.ConnPool, error) {
+
+	
+	connPool, err := pgx.NewConnPool(dbConfig)
+	if err != nil {
+		return nil, NewModelsError("models.InitDatabase() -> pgx.NewConnPool", err)
+		
+	} 
+
+	dbHandle = connPool
+	return dbHandle, nil
+
+}
+
+// Wraps an already existing error with a localized prefix
+func NewModelsError(errorPrefix string, originalError error) error {
+	return errors.New(errorPrefix + ": " + originalError.Error())
+}
+
+// Wraps local issues in an error format, without needing an already existing error
+func NewModelsErrorLocal(errorPrefix string, localError string) error {
+	return errors.New(errorPrefix + ": " + localError)
 }
 
 func GetGoTypeForColumn(columnType string) (typeReturn string, goTypeToImport string) {

@@ -445,7 +445,7 @@ func (tbl *Table) GenerateTableStruct() {
 
 func (tbl *Table) GenerateInsertFunctions() {
 
-	tmpl, err := template.New("tableInsertFunctionTemplate").Funcs(fns).Parse(TABLE_INSERT_TEMPLATE)
+	tmpl, err := template.New("tableInsertFunctionTemplate").Funcs(fns).Parse(TABLE_STATIC_INSERT_TEMPLATE)
 	if err != nil {
 		log.Fatal("GenerateInsertFunctions() fatal error running template.New:", err)
 	}

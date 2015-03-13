@@ -161,14 +161,18 @@ func (t *ToolOptions) GenerateBaseFile() {
 		log.Fatal("GenerateBaseFile() fatal error running template.Execute:", err)
 	}
 
-	var filePath string = t.OutputFolder + "/pgtogogenBase.go"
+	var filePath string = t.OutputFolder + "/modelsBase.go"
 
-	err = ioutil.WriteFile(filePath, generatedTemplate.Bytes(), 0644)
-	if err != nil {
-		log.Fatal("GenerateBaseFile() - WriteToFile() fatal error writing to file:", err)
+	if FileExists(filePath) {
+		fmt.Println("Skipping generating base file. Filepath: " + filePath + " already exists.")
+	} else {
+		err = ioutil.WriteFile(filePath, generatedTemplate.Bytes(), 0644)
+		if err != nil {
+			log.Fatal("GenerateBaseFile() - WriteToFile() fatal error writing to file:", err)
+		}
+
+		fmt.Println("Finished generating the base file. Filepath: " + filePath)
 	}
-
-	fmt.Println("Finished generating the base file. Filepath: " + filePath)
 
 }
 
