@@ -8,7 +8,7 @@ const TABLE_STATIC_DELETE_TEMPLATE = `{{$colCount := len .Columns}}{{$pkColCount
 // and the respective parameters. The condition must not include the WHERE keyword.
 // Returns the number of deleted rows (zero if no rows found for that condition), and nil error for a successful operation.
 // If operation fails, it returns zero and the error.
-func (util *t{{.GoFriendlyName}}Utils) {{$functionName}}(condition string, params ...interface{}) (int64,  error) {
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(condition string, params ...interface{}) (int64,  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
 
@@ -49,7 +49,7 @@ const TABLE_STATIC_DELETE_ALL_TEMPLATE = `{{$colCount := len .Columns}}{{$pkColC
 // Deletes all existing rows from the {{.TableName}} table.
 // Returns the number of deleted rows (zero if no rows found), and nil error for a successful operation.
 // If operation fails, it returns zero and the error.
-func (util *t{{.GoFriendlyName}}Utils) {{$functionName}}() (int64,  error) {
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() (int64,  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
 	
@@ -75,7 +75,7 @@ const TABLE_STATIC_DELETE_INSTANCE_TEMPLATE = `{{$colCount := len .Columns}}{{$p
 // inside the {{$sourceStructName}} parameter.
 // Returns true if the row was deleted, or false and nil error if no such PK value was found in the database.
 // If operation fails, it returns nil and the error.
-func (util *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}) (bool,  error) {
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}) (bool,  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
 

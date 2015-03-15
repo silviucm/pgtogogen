@@ -292,7 +292,7 @@ func (tbl *Table) CreateGenericQueries() {
 		}
 
 		// the column names, comma-separated
-		var ignoreSerialColumns bool = true
+		var ignoreSerialColumns bool = false
 		_, writeErr = genericSelectQueryBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns))
 		if writeErr != nil {
 			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names for table (select) ", tbl.TableName, ": ", writeErr)

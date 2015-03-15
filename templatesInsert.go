@@ -8,7 +8,7 @@ const TABLE_STATIC_INSERT_TEMPLATE = `{{$colCount := len .Columns}}{{$pkColCount
 // inside the pointer to a {{.GoFriendlyName}} structure passed to it.
 // Returns back the pointer to the structure with all the fields, including the PK fields.
 // If operation fails, it returns nil and the error
-func (util *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}) (*{{.GoFriendlyName}},  error) {
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}) (*{{.GoFriendlyName}},  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
 

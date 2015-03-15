@@ -58,11 +58,11 @@ import (
 
 /* Columns */
 
-const PK_GETTER_TEMPLATE = `{{$colCount := len .ParentTable.Columns}}
+const PK_GETTER_TEMPLATE = `{{$colCount := len .ParentTable.Columns}}{{$functionName := "GetBy"}}{{$sourceParam := print "input" .GoName}}
 // Queries the database for a single row based on the specified {{.GoName}} value.
 // Returns a pointer to a {{.ParentTable.GoFriendlyName}} structure if a record was found,
 // otherwise it returns nil.
-func {{.ParentTable.GoFriendlyName}}GetBy{{.GoName}}(inputParam{{.GoName}} {{.GoType}}) (returnStruct *{{.ParentTable.GoFriendlyName}}, err error) {
+func (utilRef *t{{.ParentTable.GoFriendlyName}}Utils) {{$functionName}}{{.GoName}}({{$sourceParam}} {{.GoType}}) (returnStruct *{{.ParentTable.GoFriendlyName}}, err error) {
 	
 	returnStruct = nil
 	err = nil
@@ -82,7 +82,7 @@ func {{.ParentTable.GoFriendlyName}}GetBy{{.GoName}}(inputParam{{.GoName}} {{.Go
 	var query = "{{.ParentTable.GenericSelectQuery}} WHERE {{.Name}} = $1";
 
 	// we are aiming for a single row so we will use Query Row	
-	err = currentDbHandle.QueryRow(query, inputParam{{.GoName}}).Scan({{range $i, $e := .ParentTable.Columns}}&param{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
+	err = currentDbHandle.QueryRow(query, {{$sourceParam }}).Scan({{range $i, $e := .ParentTable.Columns}}&param{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
     switch {
     case err == ErrNoRows:
             // no such row found, return nil and nil
