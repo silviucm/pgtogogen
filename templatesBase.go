@@ -15,9 +15,10 @@ import (
 	"log"
 )
 
-type ConditionTuple struct {
-	Field string
-	Value interface{}
+// Wrapper structure over the pgx transaction package, so we don't need to import
+// that package in the generated table-to-struct files.
+type Transaction struct {
+	Tx *pgx.Tx
 }
 
 // If this flag is set to true, the system will panic if the database
@@ -32,6 +33,13 @@ var ErrNoRows = pgx.ErrNoRows
 var ErrDeadConn = pgx.ErrDeadConn
 var ErrTxClosed = pgx.ErrTxClosed
 var ErrNotificationTimeout = pgx.ErrNotificationTimeout
+
+// Transaction isolation levels for the pgx package
+
+var IsoLevelSerializable = pgx.Serializable
+var IsoLevelRepeatableRead = pgx.RepeatableRead
+var IsoLevelReadCommitted = pgx.ReadCommitted
+var IsoLevelReadUncommitted = pgx.ReadUncommitted
 
 // Database settings variables, with initial, dummy values
 
@@ -122,6 +130,61 @@ func InitDatabaseMinimal(host string, port uint16, user, pass, dbName string, po
 
 }
 
+/* BEGIN Transactions utility functions */
+
+// Begins and returns a transaction using the default isolation level.
+// Unlike TxWrap, it is the responsibility of the caller to commit and
+// rollback the transaction if necessary.
+func TxBegin() (*pgx.Tx, error) {	
+	return GetDb().Begin()
+}
+
+
+// Begins and returns a transaction using the specified isolation level.
+// The following global variables can be passed:
+// {{.PackageName}}.IsoLevelSerializable
+// {{.PackageName}}.IsoLevelRepeatableRead
+// {{.PackageName}}.IsoLevelReadCommitted
+// {{.PackageName}}.IsoLevelReadUncommitted
+func TxBeginIso(isolationLevel string) (*pgx.Tx, error) {	
+	return GetDb().BeginIso(isolationLevel)
+}
+
+func TxWrap(wrapperFunc func(tx *Transaction) error) error {
+
+	var errorPrefix = "TxWrap() ERROR: "
+
+	realTx, err := GetDb().Begin()
+	if err != nil {
+		return NewModelsError(errorPrefix+"GetDb().Begin() error: ", err)
+	}
+
+	// pgx package note: Rollback is safe to call even if the tx is already closed,
+	// so if the tx commits successfully, this is a no-op
+	defer realTx.Rollback()
+
+	// wrap the real tx into our wrapper
+	tx := &Transaction{Tx: realTx}
+
+	err = wrapperFunc(tx)
+	if err != nil {
+		return NewModelsError(errorPrefix+"inner wrapperFunc() error - will return and rollback: ", err)
+	}
+
+	err = realTx.Commit()
+	if err != nil {
+		return NewModelsError(errorPrefix+"tx.Commit() error: ", err)
+	}
+
+	return nil
+
+}
+
+
+/* END Transactions utility functions */
+
+/* BEGIN Error and Logging utility functions */
+
 // Wraps an already existing error with a localized prefix
 func NewModelsError(errorPrefix string, originalError error) error {
 	return errors.New(errorPrefix + ": " + originalError.Error())
@@ -147,6 +210,8 @@ func SetDebugMode(debugMode bool) {
 func IsDebugMode() bool  {
 	return isDebugMode
 }
+
+/* END Error and Logging utility functions */
 
 func GetGoTypeForColumn(columnType string) (typeReturn string, goTypeToImport string) {
 

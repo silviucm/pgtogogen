@@ -452,7 +452,8 @@ func (tbl *Table) GenerateTableStruct() {
 
 func (tbl *Table) GenerateInsertFunctions() {
 
-	tbl.generateAndAppendTemplate("tableInsertFunctionTemplate", TABLE_STATIC_INSERT_TEMPLATE, "")
+	tbl.generateAndAppendTemplate("tableInsertFunctionTemplate", TABLE_STATIC_INSERT_TEMPLATE_ATOMIC, "")
+	tbl.generateAndAppendTemplate("tableInsertFunctionTemplate", TABLE_STATIC_INSERT_TEMPLATE_TX, "")
 
 	fmt.Println("Table insert functions generated.")
 
@@ -461,8 +462,13 @@ func (tbl *Table) GenerateInsertFunctions() {
 func (tbl *Table) GenerateDeleteFunctions() {
 
 	tbl.generateAndAppendTemplate("tableDeleteFunctionTemplate", TABLE_STATIC_DELETE_TEMPLATE, "")
+	tbl.generateAndAppendTemplate("tableDeleteFunctionTemplate", TABLE_STATIC_DELETE_TEMPLATE_TX, "")
+
 	tbl.generateAndAppendTemplate("tableDeleteInstanceFunctionTemplate", TABLE_STATIC_DELETE_INSTANCE_TEMPLATE, "")
+	tbl.generateAndAppendTemplate("tableDeleteInstanceFunctionTemplate", TABLE_STATIC_DELETE_INSTANCE_TEMPLATE_TX, "")
+
 	tbl.generateAndAppendTemplate("tableDeleteAllFunctionTemplate", TABLE_STATIC_DELETE_ALL_TEMPLATE, "")
+	tbl.generateAndAppendTemplate("tableDeleteAllFunctionTemplate", TABLE_STATIC_DELETE_ALL_TEMPLATE_TX, "")
 
 	fmt.Println("Table delete functions generated.")
 }
