@@ -58,7 +58,7 @@ import (
 
 /* Columns */
 
-const PK_GETTER_TEMPLATE = `{{$colCount := len .ParentTable.Columns}}{{$functionName := "GetBy"}}{{$sourceParam := print "input" .GoName}}
+const PK_GETTER_TEMPLATE_SINGLE_FIELD = `{{$colCount := len .ParentTable.Columns}}{{$functionName := "GetBy"}}{{$sourceParam := print "input" .GoName}}
 // Queries the database for a single row based on the specified {{.GoName}} value.
 // Returns a pointer to a {{.ParentTable.GoFriendlyName}} structure if a record was found,
 // otherwise it returns nil.
@@ -101,8 +101,14 @@ func (utilRef *t{{.ParentTable.GoFriendlyName}}Utils) {{$functionName}}{{.GoName
 }
 `
 
-const PK_SELECT_TEMPLATE = `{{$colCount := len .ParentTable.Columns}}
-func {{.ParentTable.GoFriendlyName}}GetBy{{.GoName}}(inputParam{{.GoName}} {{.GoType}}) (returnStruct *{{.ParentTable.GoFriendlyName}}, err error) {
+const PK_GETTER_TEMPLATE_MULTI_FIELD = `{{$colCount := len .ParentTable.Columns}}{{$pkColCount := len .ParentTable.PKColumns}}{{$functionName := "GetBy"}}
+// Queries the database for a single row based on the specified {{.GoName}} value.
+// Returns a pointer to a {{.ParentTable.GoFriendlyName}} structure if a record was found,
+// otherwise it returns nil.
+func (utilRef *t{{.ParentTable.GoFriendlyName}}Utils) {{$functionName}}` +
+	`{{range $i, $e := .ParentTable.PKColumns}}{{$e.GoName}}{{if ne (plus1 $i) $pkColCount}}And{{end}}{{end}}(` +
+	`{{range $i, $e := .ParentTable.PKColumns}}input{{$e.GoName}} {{$e.GoType}} {{if ne (plus1 $i) $pkColCount}},{{end}}{{end}})` +
+	` (returnStruct *{{.ParentTable.GoFriendlyName}}, err error) {
 	
 	returnStruct = nil
 	err = nil
@@ -119,34 +125,26 @@ func {{.ParentTable.GoFriendlyName}}GetBy{{.GoName}}(inputParam{{.GoName}} {{.Go
 	{{end}}
 
 	// define the select query
-	var query = "{{.ParentTable.GenericSelectQuery}} FROM {{.ParentTable.TableName}} WHERE {{.Name}} = $1";
+	var query = "{{.ParentTable.GenericSelectQuery}} WHERE {{range $i, $e := .ParentTable.PKColumns}}{{.Name}} = ${{print (plus1 $i)}}{{if ne (plus1 $i) $pkColCount}} AND {{end}}{{end}}";
 
-	rows, err := currentDbHandle.Query(query, inputParam{{.GoName}})
-
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + "fatal error running the query:", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		err := rows.Scan({{range $i, $e := .ParentTable.Columns}}&param{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
-		if err != nil {
-			return nil, NewModelsError(errorPrefix + "fatal error scanning the fields in the current row:",err.Error)
-		}		
-
-		// create the return structure as a pointer of the type
-		returnStruct = &{{.ParentTable.GoFriendlyName}}{
-			{{range .ParentTable.Columns}}{{.GoName}}: param{{.GoName}},
-			{{end}}
-		}		
-
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + "fatal generic rows error:", err.Error)
-	}
-	
-	// return the structure
-	return returnStruct, err	
+	// we are aiming for a single row so we will use Query Row	
+	err = currentDbHandle.QueryRow(query, ` +
+	`{{range $i, $e := .ParentTable.PKColumns}}input{{$e.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}` +
+	`).Scan({{range $i, $e := .ParentTable.Columns}}&param{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
+    switch {
+    case err == ErrNoRows:
+            // no such row found, return nil and nil
+			return nil, nil
+    case err != nil:
+            return nil, NewModelsError(errorPrefix + "fatal error running the query:", err)
+    default:
+           	// create the return structure as a pointer of the type
+			returnStruct = &{{.ParentTable.GoFriendlyName}}{
+				{{range .ParentTable.Columns}}{{.GoName}}: param{{.GoName}},
+				{{end}}
+			}
+			// return the structure
+			return returnStruct, nil
+    }			
 }
 `

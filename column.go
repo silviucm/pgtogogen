@@ -37,7 +37,13 @@ func (col *Column) GeneratePKGetter(parentTable *Table) []byte {
 
 	col.ParentTable = parentTable
 
-	tmpl, err := template.New("pkGetterTemplate").Funcs(fns).Parse(PK_GETTER_TEMPLATE)
+	// if the table has more than one columns as PK, supply the alternative template
+	var templateContent string = PK_GETTER_TEMPLATE_SINGLE_FIELD
+	if parentTable.PKColumns != nil && len(parentTable.PKColumns) > 1 {
+		templateContent = PK_GETTER_TEMPLATE_MULTI_FIELD
+	}
+
+	tmpl, err := template.New("pkGetterTemplate").Funcs(fns).Parse(templateContent)
 	if err != nil {
 		log.Fatal("GeneratePKGetter() fatal error running template.New:", err)
 	}

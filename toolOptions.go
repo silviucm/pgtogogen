@@ -107,12 +107,20 @@ func (t *ToolOptions) Generate() {
 			// generate the queries by PK
 			if t.GeneratePKGetters == true {
 				fmt.Println("Generating Primary Key Accessor Methods...")
-				for colIndex := range t.Tables[i].Columns {
-					if t.Tables[i].Columns[colIndex].IsPK {
-						pkGetter := t.Tables[i].Columns[colIndex].GeneratePKGetter(&t.Tables[i])
+
+				if t.Tables[i].PKColumns != nil {
+
+					if len(t.Tables[i].PKColumns) > 0 {
+
+						// the getter should only return one row,
+						// no need to iterate here, just pass the first PK column,
+						// the GeneratePKGetter method will decide which template to pick
+						// based on the number of columns in the PK constraint
+						pkGetter := t.Tables[i].PKColumns[0].GeneratePKGetter(&t.Tables[i])
 						if _, writeErr := t.Tables[i].GeneratedTemplate.Write(pkGetter); writeErr != nil {
 							log.Fatal("Generate fatal error writing bytes from the GeneratePKGetter call: ", writeErr)
 						}
+
 					}
 
 				}
