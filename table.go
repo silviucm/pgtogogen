@@ -196,14 +196,6 @@ func (tbl *Table) CollectPrimaryKeys() error {
 		}
 	}
 
-	// in case we generate the PK Getter function, we need to make sure the "database/sql" type is
-	// imported inside the generated template
-	// the generated function will make use of comparisons, such as
-	// case err == sql.ErrNoRows
-	if tbl.Options.GeneratePKGetters {
-		tbl.AddGoTypeToImport("database/sql")
-	}
-
 	// let's generate the PK-dependent strings properly
 	tbl.ColumnsString = tbl.getSqlFriendlyColumnList(false)
 	tbl.ColumnsStringNoPK = tbl.getSqlFriendlyColumnList(true)
@@ -273,14 +265,6 @@ func (tbl *Table) CollectForeignKeys() error {
 	err = rows.Err()
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	// in case we generate the FK Getter function, we need to make sure the "database/sql" type is
-	// imported inside the generated template
-	// the generated function will make use of comparisons, such as
-	// case err == sql.ErrNoRows
-	if tbl.Options.GenerateGuidGetters {
-		tbl.AddGoTypeToImport("database/sql")
 	}
 
 	return nil
@@ -463,44 +447,24 @@ func (tbl *Table) getSqlFriendlyParameters(ignoreSequenceColumns bool) string {
 
 func (tbl *Table) GenerateTableStruct() {
 
-	tmpl, err := template.New("tableTemplate").Parse(TABLE_TEMPLATE)
-	if err != nil {
-		log.Fatal("GenerateTableStruct() fatal error running template.New:", err)
-	}
-
-	var generatedTemplate bytes.Buffer
-	err = tmpl.Execute(&generatedTemplate, tbl)
-	if err != nil {
-		log.Fatal("GenerateTableStruct() fatal error running template.Execute:", err)
-	}
-
-	if _, err = tbl.GeneratedTemplate.Write(generatedTemplate.Bytes()); err != nil {
-		log.Fatal("GenerateTableStruct() fatal error writing the generated template bytes to the table buffer:", err)
-	}
-
-	fmt.Println("Table structure generated.")
-
+	tbl.generateAndAppendTemplate("GenerateTableStruct()", TABLE_TEMPLATE, "Table structure generated.")
 }
 
 func (tbl *Table) GenerateInsertFunctions() {
 
-	tmpl, err := template.New("tableInsertFunctionTemplate").Funcs(fns).Parse(TABLE_STATIC_INSERT_TEMPLATE)
-	if err != nil {
-		log.Fatal("GenerateInsertFunctions() fatal error running template.New:", err)
-	}
-
-	var generatedTemplate bytes.Buffer
-	err = tmpl.Execute(&generatedTemplate, tbl)
-	if err != nil {
-		log.Fatal("GenerateInsertFunctions() fatal error running template.Execute:", err)
-	}
-
-	if _, err = tbl.GeneratedTemplate.Write(generatedTemplate.Bytes()); err != nil {
-		log.Fatal("GenerateInsertFunctions() fatal error writing the generated template bytes to the table buffer:", err)
-	}
+	tbl.generateAndAppendTemplate("tableInsertFunctionTemplate", TABLE_STATIC_INSERT_TEMPLATE, "")
 
 	fmt.Println("Table insert functions generated.")
 
+}
+
+func (tbl *Table) GenerateDeleteFunctions() {
+
+	tbl.generateAndAppendTemplate("tableDeleteFunctionTemplate", TABLE_STATIC_DELETE_TEMPLATE, "")
+	tbl.generateAndAppendTemplate("tableDeleteInstanceFunctionTemplate", TABLE_STATIC_DELETE_INSTANCE_TEMPLATE, "")
+	tbl.generateAndAppendTemplate("tableDeleteAllFunctionTemplate", TABLE_STATIC_DELETE_ALL_TEMPLATE, "")
+
+	fmt.Println("Table delete functions generated.")
 }
 
 func (tbl *Table) WriteToFile() {
@@ -542,6 +506,29 @@ func (tbl *Table) WriteToCustomFile() {
 		}
 
 		fmt.Println("Finished generating custom file for table " + tbl.TableName + ". Filepath: " + customFilePath)
+	}
+
+}
+
+func (tbl *Table) generateAndAppendTemplate(templateName string, templateContent string, taskCompletionMessage string) {
+
+	tmpl, err := template.New(templateName).Funcs(fns).Parse(templateContent)
+	if err != nil {
+		log.Fatal(templateName+" fatal error running template.New:", err)
+	}
+
+	var generatedTemplate bytes.Buffer
+	err = tmpl.Execute(&generatedTemplate, tbl)
+	if err != nil {
+		log.Fatal(templateName+" fatal error running template.Execute:", err)
+	}
+
+	if _, err = tbl.GeneratedTemplate.Write(generatedTemplate.Bytes()); err != nil {
+		log.Fatal(templateName+" fatal error writing the generated template bytes to the table buffer:", err)
+	}
+
+	if taskCompletionMessage != "" {
+		fmt.Println(taskCompletionMessage)
 	}
 
 }

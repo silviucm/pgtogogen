@@ -101,6 +101,9 @@ func (t *ToolOptions) Generate() {
 			// generate the insert-related functions
 			t.Tables[i].GenerateInsertFunctions()
 
+			// generate the delete-related functions
+			t.Tables[i].GenerateDeleteFunctions()
+
 			// generate the queries by PK
 			if t.GeneratePKGetters == true {
 				fmt.Println("Generating Primary Key Accessor Methods...")

@@ -12,11 +12,28 @@ const BASE_TEMPLATE = `package {{.PackageName}}
 import (
 	"github.com/silviucm/pgx"	
 	"errors"
+	"log"
 )
+
+type ConditionTuple struct {
+	Field string
+	Value interface{}
+}
 
 // If this flag is set to true, the system will panic if the database
 // connection cannot be made. Otherwise, GetDb() will simply return nil.
 const FLAG_PANIC_ON_INIT_DB_FAIL bool = true
+
+// variables that mimick the database driver standard errors, so
+// we don't need to import that package in the generated table-to-struct files
+// or any other package, such as pgx - the import would only reside here, in the base file
+
+var ErrNoRows = pgx.ErrNoRows
+var ErrDeadConn = pgx.ErrDeadConn
+var ErrTxClosed = pgx.ErrTxClosed
+var ErrNotificationTimeout = pgx.ErrNotificationTimeout
+
+// Database settings variables, with initial, dummy values
 
 var DB_HOST string = "localhost"
 var DB_PORT uint16 = 5432
@@ -24,6 +41,9 @@ var DB_USER string = "testuser"
 var DB_PASS string = "testuser"
 var DB_NAME string = "testdb"
 var DB_POOL_MAX_CONNECTIONS int = 100
+
+// debug mode flag
+var isDebugMode bool = false
 
 var dbHandle *pgx.ConnPool
 
@@ -89,6 +109,19 @@ func InitDatabase(dbConfig pgx.ConnPoolConfig) (*pgx.ConnPool, error) {
 
 }
 
+func InitDatabaseMinimal(host string, port uint16, user, pass, dbName string, poolMaxConnections int) (*pgx.ConnPool, error) {
+
+	DB_HOST = host
+	DB_USER = user
+	DB_PASS = pass
+	DB_NAME = dbName
+	DB_PORT = port
+	DB_POOL_MAX_CONNECTIONS = poolMaxConnections
+	
+	return InitDatabase(GetDefaultDbSettings())
+
+}
+
 // Wraps an already existing error with a localized prefix
 func NewModelsError(errorPrefix string, originalError error) error {
 	return errors.New(errorPrefix + ": " + originalError.Error())
@@ -99,6 +132,22 @@ func NewModelsErrorLocal(errorPrefix string, localError string) error {
 	return errors.New(errorPrefix + ": " + localError)
 }
 
+// Logs the message to the console 
+func Debug(v ...interface{}) {
+	if isDebugMode {
+		log.Println(v)
+	}
+}
+
+// Set the debug mode to true or false
+func SetDebugMode(debugMode bool) {
+	isDebugMode = debugMode
+}
+
+func IsDebugMode() bool  {
+	return isDebugMode
+}
+
 func GetGoTypeForColumn(columnType string) (typeReturn string, goTypeToImport string) {
 
 	typeReturn = ""
@@ -107,8 +156,8 @@ func GetGoTypeForColumn(columnType string) (typeReturn string, goTypeToImport st
 	switch columnType {
 	case "character varying":
 		typeReturn = "string"
-	case "integer":
-		typeReturn = "int"
+	case "integer", "serial":
+		typeReturn = "int32"
 	case "boolean":
 		typeReturn = "bool"
 	case "uuid":

@@ -36,8 +36,8 @@ func GetGoTypeForColumn(columnType string) (typeReturn string, goTypeToImport st
 	switch columnType {
 	case "character varying":
 		typeReturn = "string"
-	case "integer":
-		typeReturn = "int"
+	case "integer", "serial":
+		typeReturn = "int32"
 	case "boolean":
 		typeReturn = "bool"
 	case "uuid":

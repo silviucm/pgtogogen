@@ -19,8 +19,9 @@ const TABLE_TEMPLATE = `package {{.Options.PackageName}}
 /* *********************************************************** */
 
 import (
+	"bytes"
 	{{range $key, $value := .GoTypesToImport}}"{{$value}}"
-	{{end}}	
+	{{end}}
 )
 
 const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.TableName}}"
@@ -28,8 +29,15 @@ const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.TableName}}"
 type {{.GoFriendlyName}} struct {
 	{{range .Columns}}{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
 	{{end}}	
-	PgToGo_Control_IgnorePKValuesWhenInsertingAndUseSequence bool // set this to true if you want Inserts to ignore the PK fields
-}`
+	PgToGo_IgnorePKValuesWhenInsertingAndUseSequence bool // set this to true if you want Inserts to ignore the PK fields	
+}
+
+// fake, interal type to allow a singleton structure that would hold static-like methods
+type t{{.GoFriendlyName}}Utils struct {}
+
+// singleton-like structure, to allow grouping of methods per table, not per package
+var {{.GoFriendlyName}}Utils *t{{.GoFriendlyName}}Utils
+`
 
 const TABLE_TEMPLATE_CUSTOM = `package {{.Options.PackageName}}
 
@@ -76,7 +84,7 @@ func {{.ParentTable.GoFriendlyName}}GetBy{{.GoName}}(inputParam{{.GoName}} {{.Go
 	// we are aiming for a single row so we will use Query Row	
 	err = currentDbHandle.QueryRow(query, inputParam{{.GoName}}).Scan({{range $i, $e := .ParentTable.Columns}}&param{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
     switch {
-    case err == sql.ErrNoRows:
+    case err == ErrNoRows:
             // no such row found, return nil and nil
 			return nil, nil
     case err != nil:
