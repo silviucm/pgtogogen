@@ -157,32 +157,53 @@ func (t *ToolOptions) WriteFiles() {
 
 }
 
+func (t *ToolOptions) WriteBaseFiles() {
+
+	t.writeBaseTemplateFileFile("main base file", BASE_TEMPLATE, "modelsBase.go", true)
+	t.writeBaseTemplateFileFile("db settings base file", BASE_TEMPLATE_SETTINGS, "modelsDbSettings.go", false)
+	t.writeBaseTemplateFileFile("collections base file", BASE_TEMPLATE_COLLECTIONS, "modelsCollections.go", false)
+
+}
+
 // Generates the base file of the package that contains initialization functions,
 // convenience functions to get the database handle, query preparing, etc
-func (t *ToolOptions) GenerateBaseFile() {
 
-	tmpl, err := template.New("tableTemplate").Parse(BASE_TEMPLATE)
+func (t *ToolOptions) writeBaseTemplateFileFile(templateName, templateContent string, baseFilename string, overwritable bool) {
+
+	tmpl, err := template.New(templateName).Parse(templateContent)
 	if err != nil {
-		log.Fatal("GenerateBaseFile() fatal error running template.New:", err)
+		log.Fatal("writeBaseTemplateFileFile() fatal error running template.New:", err)
 	}
 
 	var generatedTemplate bytes.Buffer
 	err = tmpl.Execute(&generatedTemplate, t)
 	if err != nil {
-		log.Fatal("GenerateBaseFile() fatal error running template.Execute:", err)
+		log.Fatal("writeBaseTemplateFileFile() fatal error running template.Execute:", err)
 	}
 
-	var filePath string = t.OutputFolder + "/modelsBase.go"
+	var filePath string = t.OutputFolder + "/" + baseFilename
 
-	if FileExists(filePath) {
-		fmt.Println("Skipping generating base file. Filepath: " + filePath + " already exists.")
-	} else {
+	if overwritable {
+
 		err = ioutil.WriteFile(filePath, generatedTemplate.Bytes(), 0644)
 		if err != nil {
 			log.Fatal("GenerateBaseFile() - WriteToFile() fatal error writing to file:", err)
 		}
 
-		fmt.Println("Finished generating the base file. Filepath: " + filePath)
+		fmt.Println("Finished generating the " + templateName + " base file. Filepath: " + filePath)
+
+	} else {
+
+		if FileExists(filePath) {
+			fmt.Println("Skipping generating base file. Filepath: " + filePath + " already exists.")
+		} else {
+			err = ioutil.WriteFile(filePath, generatedTemplate.Bytes(), 0644)
+			if err != nil {
+				log.Fatal("GenerateBaseFile() - WriteToFile() fatal error writing to file:", err)
+			}
+
+			fmt.Println("Finished generating the " + templateName + " base file. Filepath: " + filePath)
+		}
 	}
 
 }

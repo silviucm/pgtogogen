@@ -149,7 +149,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 	// define the condition based on the PK columns
 	var deleteInstanceQueryCondition string = "	{{range $i, $e := .PKColumns}}{{.Name}} = ${{print (plus1 $i)}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}"
 
-	rowCount, err := {{.GoFriendlyName}}Utils.Delete(deleteInstanceQueryCondition, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
+	rowCount, err := Tables.{{.GoFriendlyName}}.Delete(deleteInstanceQueryCondition, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
 	if err != nil {
 		return false, NewModelsError(errorPrefix,err)
 	}

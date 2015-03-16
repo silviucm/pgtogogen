@@ -33,10 +33,9 @@ type {{.GoFriendlyName}} struct {
 }
 
 // fake, interal type to allow a singleton structure that would hold static-like methods
-type t{{.GoFriendlyName}}Utils struct {}
-
-// singleton-like structure, to allow grouping of methods per table, not per package
-var {{.GoFriendlyName}}Utils *t{{.GoFriendlyName}}Utils
+type t{{.GoFriendlyName}}Utils struct {
+	PgToGo_IgnorePKValuesWhenInsertingAndUseSequence bool // set this to true if you want Inserts to ignore the PK fields	
+}
 `
 
 const TABLE_TEMPLATE_CUSTOM = `package {{.Options.PackageName}}

@@ -87,7 +87,7 @@ func main() {
 	options.WriteFiles()
 
 	// write the base file
-	options.GenerateBaseFile()
+	options.WriteBaseFiles()
 
 }
 
