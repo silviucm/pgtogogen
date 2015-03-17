@@ -10,7 +10,7 @@ import (
 
 const ARGS_ERROR_HEADER string = "\n-------------------------\nARGUMENTS ERROR:\n-------------------------\n"
 
-var dbHost, dbPort, dbName, dbUser, dbPass, outputFolder, packageName *string
+var dbHost, dbPort, dbName, dbUser, dbPass, dbSchema, outputFolder, packageName *string
 var generatePKGetters, generateGuidGetters *bool
 
 var dbPortUInt16 uint16 = 5432
@@ -25,6 +25,7 @@ func main() {
 	dbName = flag.String("n", "", "database name")
 	dbUser = flag.String("u", "", "database user name")
 	dbPass = flag.String("pass", "", "database password")
+	dbSchema = flag.String("schema", "public", "database schema, defaults to 'public' if left empty")
 
 	// location settings
 	outputFolder = flag.String("o", "./models", "the output folder to generate the db structures, defaults to models")
@@ -45,11 +46,12 @@ func main() {
 
 	// assign the options to a ToolOptions struct
 	options := &ToolOptions{
-		DbHost: *dbHost,
-		DbPort: dbPortUInt16,
-		DbName: *dbName,
-		DbUser: *dbUser,
-		DbPass: *dbPass,
+		DbHost:   *dbHost,
+		DbPort:   dbPortUInt16,
+		DbName:   *dbName,
+		DbUser:   *dbUser,
+		DbPass:   *dbPass,
+		DbSchema: *dbSchema,
 
 		OutputFolder: *outputFolder,
 		PackageName:  *packageName,

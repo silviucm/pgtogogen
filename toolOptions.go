@@ -12,11 +12,12 @@ import (
 )
 
 type ToolOptions struct {
-	DbHost string
-	DbPort uint16
-	DbName string
-	DbUser string
-	DbPass string
+	DbHost   string
+	DbPort   uint16
+	DbName   string
+	DbUser   string
+	DbPass   string
+	DbSchema string
 
 	OutputFolder string
 
@@ -28,6 +29,10 @@ type ToolOptions struct {
 	ConnectionPool *pgx.ConnPool
 
 	Tables []Table
+	Views  []View
+
+	// internal counter for materialized views
+	noMaterializedViews int
 }
 
 func (t *ToolOptions) InitDatabase() (*pgx.ConnPool, error) {
@@ -69,14 +74,42 @@ func (t *ToolOptions) Collect() {
 	// collect all the user tables from the database
 	fmt.Print("Collecting tables...")
 	if err := t.CollectTables(); err != nil {
-		log.Fatal("Generate(): CollectTables fatal error: ", err)
+		log.Fatal("Collect(): CollectTables fatal error: ", err)
 	}
 
-	// iterate through each table and generate the struct
+	// display the table collection summary
 	if t.Tables != nil {
 		fmt.Println("Done: Found " + strconv.Itoa(len(t.Tables)) + " tables.")
 	} else {
 		fmt.Println("Done: No tables found.")
+	}
+
+	// collect all the user views from the database
+	fmt.Println(" ")
+	fmt.Print("Collecting views...")
+	if err := t.CollectViews(); err != nil {
+		log.Fatal("Collect(): CollectViews fatal error: ", err)
+	}
+
+	// display the view collection summary
+	if t.Views != nil {
+		fmt.Println("Done: Found " + strconv.Itoa(len(t.Views)) + " views.")
+	} else {
+		fmt.Println("Done: No views found.")
+	}
+
+	// collect all the materialized views from the database
+	fmt.Println(" ")
+	fmt.Print("Collecting materialized views...")
+	if err := t.CollectMaterializedViews(); err != nil {
+		log.Fatal("Collect(): CollectMaterializedViews fatal error: ", err)
+	}
+
+	// display the view collection summary
+	if t.noMaterializedViews > 0 {
+		fmt.Println("Done: Found " + strconv.Itoa(t.noMaterializedViews) + " materialized views.")
+	} else {
+		fmt.Println("Done: No materialized views found.")
 	}
 }
 
@@ -92,11 +125,14 @@ func (t *ToolOptions) Generate() {
 		for i := range t.Tables {
 
 			fmt.Println("--------------------------------------------------------------------------------------------")
-			log.Println("Beginning generation for table: ", t.Tables[i].TableName)
+			log.Println("Beginning generation for table: ", t.Tables[i].DbName)
 			fmt.Println("--------------------------------------------------------------------------------------------")
 
 			// generate the table structure
 			t.Tables[i].GenerateTableStruct()
+
+			// generate the select statements
+			t.Tables[i].GenerateSelectFunctions()
 
 			// generate the insert-related functions
 			t.Tables[i].GenerateInsertFunctions()
@@ -130,6 +166,26 @@ func (t *ToolOptions) Generate() {
 		fmt.Println("Done: No tables found.")
 	}
 
+	// iterate through each view and generate anything related
+	if t.Views != nil {
+
+		for i := range t.Views {
+
+			fmt.Println("--------------------------------------------------------------------------------------------")
+			log.Println("Beginning generation for view: ", t.Views[i].DbName)
+			fmt.Println("--------------------------------------------------------------------------------------------")
+
+			// generate the table structure
+			t.Views[i].GenerateViewStruct()
+
+			// generate the select statements
+			t.Views[i].GenerateSelectFunctions()
+
+		}
+	} else {
+		fmt.Println("Done: No views found.")
+	}
+
 }
 
 func (t *ToolOptions) WriteFiles() {
@@ -155,6 +211,22 @@ func (t *ToolOptions) WriteFiles() {
 		fmt.Println("Done: No tables found.")
 	}
 
+	// iterate through each view and generate anything related
+	if t.Views != nil {
+
+		for i := range t.Views {
+
+			// generate the table structure
+			t.Views[i].WriteToFile()
+
+			// generate one-time only custom files
+			// if they are already present, they will be skipped
+			t.Views[i].WriteToCustomFile()
+
+		}
+	} else {
+		fmt.Println("Done: No views found.")
+	}
 }
 
 func (t *ToolOptions) WriteBaseFiles() {
@@ -227,7 +299,7 @@ func (t *ToolOptions) CollectTables() error {
 
 		// instantiate a table struct
 		currentTable := &Table{
-			TableName:          currentTableName,
+			DbName:             currentTableName,
 			GoFriendlyName:     GetGoFriendlyNameForTable(currentTableName),
 			ConnectionPool:     t.ConnectionPool,
 			Options:            t,
@@ -245,12 +317,12 @@ func (t *ToolOptions) CollectTables() error {
 		// collect the columns for the table
 		// colect all the column info
 		if err := currentTable.CollectColumns(); err != nil {
-			log.Fatal("CollectTables(): CollectColumns method for table ", currentTable.TableName, " FATAL error: ", err)
+			log.Fatal("CollectTables(): CollectColumns method for table ", currentTable.DbName, " FATAL error: ", err)
 		}
 
 		// collect the primary keys for the table
 		if err := currentTable.CollectPrimaryKeys(); err != nil {
-			log.Fatal("CollectTables(): CollectPrimaryKeys method for table ", currentTable.TableName, " FATAL error: ", err)
+			log.Fatal("CollectTables(): CollectPrimaryKeys method for table ", currentTable.DbName, " FATAL error: ", err)
 		}
 
 		// generate the typical select sql queries
@@ -258,6 +330,186 @@ func (t *ToolOptions) CollectTables() error {
 
 		// add the table to the slice
 		t.Tables = append(t.Tables, *currentTable)
+
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
+
+}
+
+func (t *ToolOptions) CollectViews() error {
+
+	var currentViewName string
+
+	rows, err := t.ConnectionPool.Query("SELECT table_name FROM information_schema.views WHERE table_schema=$1 AND table_catalog=$2", t.DbSchema, t.DbName)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err := rows.Scan(&currentViewName)
+		if err != nil {
+			log.Fatal("CollectViews fatal error inside rows.Next() iteration: ", err)
+		}
+
+		// instantiate a table struct
+		currentView := &View{
+			DbName:             currentViewName,
+			GoFriendlyName:     GetGoFriendlyNameForTable(currentViewName),
+			ConnectionPool:     t.ConnectionPool,
+			Options:            t,
+			GeneratedTemplate:  bytes.Buffer{},
+			GenericSelectQuery: "",
+			GenericInsertQuery: "",
+
+			ColumnsString:  "",
+			IsMaterialized: false,
+		}
+
+		currentView.GoTypesToImport = make(map[string]string)
+
+		// collect the columns for the view
+		// colect all the column info
+		if err := currentView.CollectColumns(); err != nil {
+			log.Fatal("CollectViews(): CollectColumns method for table ", currentView.DbName, " FATAL error: ", err)
+		}
+
+		// generate the typical select sql queries
+		currentView.CreateGenericQueries()
+
+		// add the view to the slice
+		t.Views = append(t.Views, *currentView)
+
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
+
+}
+
+func (t *ToolOptions) CollectMaterializedViews() error {
+
+	// materialized views cannot (as of March 2015) be extracted easily from information schema
+	// the query is very complicated, as below
+	var materializedViewsQuery = `SELECT table_name FROM
+(SELECT 
+    NULL AS TABLE_CAT, 
+    n.nspname AS TABLE_SCHEM, 
+    c.relname AS TABLE_NAME,  
+    CASE n.nspname ~ '^pg_' OR n.nspname = 'information_schema'  
+        WHEN true THEN
+            CASE  
+                WHEN n.nspname = 'pg_catalog' OR n.nspname = 'information_schema' THEN
+                    CASE c.relkind
+                        WHEN 'r' THEN 'SYSTEM TABLE'   
+                        WHEN 'v' THEN 'SYSTEM VIEW'   
+                        WHEN 'i' THEN 'SYSTEM INDEX'   
+                        ELSE NULL  
+                    END 
+                WHEN n.nspname = 'pg_toast' THEN
+                    CASE c.relkind   
+                        WHEN 'r' THEN 'SYSTEM TOAST TABLE'   
+                        WHEN 'i' THEN 'SYSTEM TOAST INDEX'
+                        ELSE NULL
+                    END 
+                ELSE
+                    CASE c.relkind
+                        WHEN 'r' THEN 'TEMPORARY TABLE'   
+                        WHEN 'i' THEN 'TEMPORARY INDEX'   
+                        WHEN 'S' THEN 'TEMPORARY SEQUENCE'   
+                        WHEN 'v' THEN 'TEMPORARY VIEW'
+                        ELSE NULL   
+                    END  
+            END  
+        WHEN false THEN
+            CASE c.relkind  
+                WHEN 'r' THEN 'TABLE'  
+                WHEN 'i' THEN 'INDEX'  
+                WHEN 'S' THEN 'SEQUENCE'  
+                WHEN 'v' THEN 'VIEW'  
+                WHEN 'c' THEN 'TYPE'  
+                WHEN 'f' THEN 'FOREIGN TABLE'  
+                WHEN 'm' THEN 'MATERIALIZED VIEW'  
+                ELSE NULL
+            END  
+        ELSE NULL 
+    END  
+        AS TABLE_TYPE,
+    d.description AS REMARKS,
+    c.relkind
+
+FROM
+    pg_catalog.pg_namespace n, pg_catalog.pg_class c
+    LEFT JOIN pg_catalog.pg_description d ON (c.oid = d.objoid AND d.objsubid = 0)  
+    LEFT JOIN pg_catalog.pg_class dc ON (d.classoid=dc.oid AND dc.relname='pg_class')  
+    LEFT JOIN pg_catalog.pg_namespace dn ON (dn.oid=dc.relnamespace AND dn.nspname='pg_catalog') 
+
+WHERE
+    c.relnamespace = n.oid
+    AND c.relname LIKE '%'
+    AND n.nspname <> 'pg_catalog'
+    AND n.nspname <> 'information_schema'
+    AND c.relkind IN ('r', 'v', 'm', 'f')
+
+ORDER BY
+    TABLE_TYPE,
+    TABLE_SCHEM,
+    TABLE_NAME) t WHERE t.table_type = 'MATERIALIZED VIEW' AND TABLE_SCHEM = $1
+	`
+
+	var currentViewName string
+
+	rows, err := t.ConnectionPool.Query(materializedViewsQuery, t.DbSchema)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err := rows.Scan(&currentViewName)
+		if err != nil {
+			log.Fatal("CollectViews fatal error inside rows.Next() iteration: ", err)
+		}
+
+		// instantiate a table struct
+		currentView := &View{
+			DbName:             currentViewName,
+			GoFriendlyName:     GetGoFriendlyNameForTable(currentViewName),
+			ConnectionPool:     t.ConnectionPool,
+			Options:            t,
+			GeneratedTemplate:  bytes.Buffer{},
+			GenericSelectQuery: "",
+			GenericInsertQuery: "",
+
+			ColumnsString:  "",
+			IsMaterialized: true,
+		}
+
+		currentView.GoTypesToImport = make(map[string]string)
+
+		// collect the columns for the view
+		// colect all the column info
+		if err := currentView.CollectMaterializedViewColumns(); err != nil {
+			log.Fatal("CollectViews(): CollectMaterializedViewColumns method for table ", currentView.DbName, " FATAL error: ", err)
+		}
+
+		// generate the typical select sql queries
+		currentView.CreateGenericQueries()
+
+		// add the view to the slice
+		t.Views = append(t.Views, *currentView)
+
+		t.noMaterializedViews = t.noMaterializedViews + 1
 
 	}
 	err = rows.Err()

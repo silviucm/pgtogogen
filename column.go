@@ -15,7 +15,7 @@ type Column struct {
 	ConnectionPool *pgx.ConnPool
 	ParentTable    *Table
 
-	Name         string
+	DbName       string
 	Type         string
 	MaxLength    int
 	DefaultValue pgx.NullString

@@ -27,7 +27,7 @@ type Table struct {
 	FKColumns       []Column
 	FKColumnsString string
 
-	TableName      string
+	DbName         string
 	GoFriendlyName string
 
 	GoTypesToImport map[string]string
@@ -53,7 +53,7 @@ func (tbl *Table) CollectColumns() error {
 	var charMaxLength pgx.NullInt32
 
 	rows, err := tbl.ConnectionPool.Query("SELECT column_name, column_default, is_nullable, data_type, character_maximum_length FROM information_schema.columns "+
-		" WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position;", tbl.TableName)
+		" WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position;", tbl.DbName)
 
 	if err != nil {
 		log.Fatal("CollectColumns() fatal error running the query:", err)
@@ -78,7 +78,7 @@ func (tbl *Table) CollectColumns() error {
 
 		// instantiate a column struct
 		currentColumn := &Column{
-			Name:         currentColumnName,
+			DbName:       currentColumnName,
 			Type:         dataType,
 			DefaultValue: columnDefault,
 			Nullable:     DecodeNullable(isNullable),
@@ -138,7 +138,7 @@ func (tbl *Table) CollectPrimaryKeys() error {
 			         kcu.constraint_name,
 			         kcu.ordinal_position;`
 
-	rows, err := tbl.ConnectionPool.Query(pkQuery, tbl.Options.DbName, tbl.TableName)
+	rows, err := tbl.ConnectionPool.Query(pkQuery, tbl.Options.DbName, tbl.DbName)
 
 	if err != nil {
 		log.Fatal("CollectPrimaryKeys() fatal error running the query:", err)
@@ -159,7 +159,7 @@ func (tbl *Table) CollectPrimaryKeys() error {
 		}
 
 		for i := range tbl.Columns {
-			if tbl.Columns[i].Name == currentColumnName {
+			if tbl.Columns[i].DbName == currentColumnName {
 				tbl.Columns[i].IsPK = true
 				tbl.Columns[i].IsCompositePK = false
 				numberOfPKs = numberOfPKs + 1
@@ -220,7 +220,7 @@ func (tbl *Table) CollectForeignKeys() error {
 		      ON ccu.constraint_name = tc.constraint_name
 		WHERE constraint_type = 'FOREIGN KEY' AND tc.table_catalog=$1 AND tc.table_name=$2 ;`
 
-	rows, err := tbl.ConnectionPool.Query(fkQuery, tbl.Options.DbName, tbl.TableName)
+	rows, err := tbl.ConnectionPool.Query(fkQuery, tbl.Options.DbName, tbl.DbName)
 
 	if err != nil {
 		log.Fatal("CollectForeignKeys() fatal error running the query:", err)
@@ -241,7 +241,7 @@ func (tbl *Table) CollectForeignKeys() error {
 		}
 
 		for i := range tbl.Columns {
-			if tbl.Columns[i].Name == currentColumnName {
+			if tbl.Columns[i].DbName == currentColumnName {
 				tbl.Columns[i].IsFK = true
 				numberOfFKs = numberOfFKs + 1
 
@@ -288,20 +288,20 @@ func (tbl *Table) CreateGenericQueries() {
 		// The SELECT prefix
 		_, writeErr := genericSelectQueryBuffer.WriteString("SELECT ")
 		if writeErr != nil {
-			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericSelectQuery for table ", tbl.TableName, ": ", writeErr)
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericSelectQuery for table ", tbl.DbName, ": ", writeErr)
 		}
 
 		// the column names, comma-separated
 		var ignoreSerialColumns bool = false
 		_, writeErr = genericSelectQueryBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns))
 		if writeErr != nil {
-			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names for table (select) ", tbl.TableName, ": ", writeErr)
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names for table (select) ", tbl.DbName, ": ", writeErr)
 		}
 
 		// The FROM section
-		_, writeErr = genericSelectQueryBuffer.WriteString(" FROM " + tbl.TableName + " ")
+		_, writeErr = genericSelectQueryBuffer.WriteString(" FROM " + tbl.DbName + " ")
 		if writeErr != nil {
-			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericSelectQuery for table ", tbl.TableName, ": ", writeErr)
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericSelectQuery for table ", tbl.DbName, ": ", writeErr)
 		}
 		tbl.GenericSelectQuery = genericSelectQueryBuffer.String()
 	}
@@ -313,40 +313,40 @@ func (tbl *Table) CreateGenericQueries() {
 		genericInsertQueryNonPKColumnsBuffer := bytes.Buffer{}
 
 		// The INSERT prefix
-		_, writeErr := genericInsertQueryNonPKColumnsBuffer.WriteString("INSERT INTO " + tbl.TableName + "(")
+		_, writeErr := genericInsertQueryNonPKColumnsBuffer.WriteString("INSERT INTO " + tbl.DbName + "(")
 		if writeErr != nil {
-			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery for table ", tbl.TableName, ": ", writeErr)
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery for table ", tbl.DbName, ": ", writeErr)
 		}
 
-		_, writeErr = genericInsertQueryAllColumnsBuffer.WriteString("INSERT INTO " + tbl.TableName + "(")
+		_, writeErr = genericInsertQueryAllColumnsBuffer.WriteString("INSERT INTO " + tbl.DbName + "(")
 		if writeErr != nil {
-			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery for table ", tbl.TableName, ": ", writeErr)
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery for table ", tbl.DbName, ": ", writeErr)
 		}
 
 		// the column names, comma-separated
 		var ignoreSerialColumns bool = true
 		_, writeErr = genericInsertQueryNonPKColumnsBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns))
 		if writeErr != nil {
-			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names (without pk) for table (insert) ", tbl.TableName, ": ", writeErr)
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names (without pk) for table (insert) ", tbl.DbName, ": ", writeErr)
 		}
 
 		ignoreSerialColumns = false
 		_, writeErr = genericInsertQueryAllColumnsBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns))
 		if writeErr != nil {
-			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names (with pk) for table (insert) ", tbl.TableName, ": ", writeErr)
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names (with pk) for table (insert) ", tbl.DbName, ": ", writeErr)
 		}
 
 		// The VALUES section
 		ignoreSerialColumns = true
 		_, writeErr = genericInsertQueryNonPKColumnsBuffer.WriteString(") VALUES(" + tbl.getSqlFriendlyParameters(ignoreSerialColumns) + ") ")
 		if writeErr != nil {
-			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery (without pk) for table ", tbl.TableName, ": ", writeErr)
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery (without pk) for table ", tbl.DbName, ": ", writeErr)
 		}
 
 		ignoreSerialColumns = false
 		_, writeErr = genericInsertQueryAllColumnsBuffer.WriteString(") VALUES(" + tbl.getSqlFriendlyParameters(ignoreSerialColumns) + ") ")
 		if writeErr != nil {
-			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery (with pk) for table ", tbl.TableName, ": ", writeErr)
+			log.Fatal("CollectTables(): FATAL error writing to buffer when generating GenericInsertQuery (with pk) for table ", tbl.DbName, ": ", writeErr)
 		}
 		tbl.GenericInsertQuery = genericInsertQueryAllColumnsBuffer.String()
 		tbl.GenericInsertQueryNoPK = genericInsertQueryNonPKColumnsBuffer.String()
@@ -376,14 +376,14 @@ func (tbl *Table) getSqlFriendlyColumnList(ignoreSequenceColumns bool) string {
 		}
 
 		if totalNumberOfColumns == colRange {
-			colNameToWriteToBuffer = tbl.Columns[colRange].Name
+			colNameToWriteToBuffer = tbl.Columns[colRange].DbName
 		} else {
-			colNameToWriteToBuffer = tbl.Columns[colRange].Name + ", "
+			colNameToWriteToBuffer = tbl.Columns[colRange].DbName + ", "
 		}
 
 		_, writeErr := genericQueryFriendlyColumnsBuffer.WriteString(colNameToWriteToBuffer)
 		if writeErr != nil {
-			log.Fatal("Table.getSqlFriendlyColumnList(): FATAL error writing to buffer when generating column names for table ", tbl.TableName, ": ", writeErr)
+			log.Fatal("Table.getSqlFriendlyColumnList(): FATAL error writing to buffer when generating column names for table ", tbl.DbName, ": ", writeErr)
 		}
 	}
 
@@ -430,7 +430,7 @@ func (tbl *Table) getSqlFriendlyParameters(ignoreSequenceColumns bool) string {
 
 		_, writeErr := genericQueryFriendlyParamsBuffer.WriteString(paramToWriteToBuffer)
 		if writeErr != nil {
-			log.Fatal("Table.getSqlFriendlyParameters(): FATAL error writing to buffer when generating params for table ", tbl.TableName, ": ", writeErr)
+			log.Fatal("Table.getSqlFriendlyParameters(): FATAL error writing to buffer when generating params for table ", tbl.DbName, ": ", writeErr)
 		}
 	}
 
@@ -448,6 +448,18 @@ func (tbl *Table) getSqlFriendlyParameters(ignoreSequenceColumns bool) string {
 func (tbl *Table) GenerateTableStruct() {
 
 	tbl.generateAndAppendTemplate("GenerateTableStruct()", TABLE_TEMPLATE, "Table structure generated.")
+}
+
+func (tbl *Table) GenerateSelectFunctions() {
+
+	tbl.generateAndAppendTemplate("tableSelectWhereTemplate", SELECT_TEMPLATE_WHERE, "")
+	tbl.generateAndAppendTemplate("tableSelectAllTemplate", SELECT_TEMPLATE_ALL, "")
+
+	tbl.generateAndAppendTemplate("tableSelectWhereTemplateTx", SELECT_TEMPLATE_WHERE_TX, "")
+	tbl.generateAndAppendTemplate("tableSelectAllTemplateTx", SELECT_TEMPLATE_ALL_TX, "")
+
+	fmt.Println("Table select functions generated.")
+
 }
 
 func (tbl *Table) GenerateInsertFunctions() {
@@ -482,7 +494,7 @@ func (tbl *Table) WriteToFile() {
 		log.Fatal("WriteToFile() fatal error writing to file:", err)
 	}
 
-	fmt.Println("Finished generating structures for table " + tbl.TableName + ". Filepath: " + filePath)
+	fmt.Println("Finished generating structures for table " + tbl.DbName + ". Filepath: " + filePath)
 }
 
 // This method only creates the custom file if it is not already in the folder.
@@ -504,14 +516,14 @@ func (tbl *Table) WriteToCustomFile() {
 	var customFilePath string = tbl.Options.OutputFolder + "/" + CamelCase(tbl.GoFriendlyName) + "-custom.go"
 
 	if FileExists(customFilePath) {
-		fmt.Println("Skipping generating custom file for table " + tbl.TableName + ". Filepath: " + customFilePath + " already exists.")
+		fmt.Println("Skipping generating custom file for table " + tbl.DbName + ". Filepath: " + customFilePath + " already exists.")
 	} else {
 		err := ioutil.WriteFile(customFilePath, generatedCustomFileTemplate.Bytes(), 0644)
 		if err != nil {
 			log.Fatal("WriteToCustomFile() fatal error writing to file:", err)
 		}
 
-		fmt.Println("Finished generating custom file for table " + tbl.TableName + ". Filepath: " + customFilePath)
+		fmt.Println("Finished generating custom file for table " + tbl.DbName + ". Filepath: " + customFilePath)
 	}
 
 }

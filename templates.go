@@ -24,7 +24,7 @@ import (
 	{{end}}
 )
 
-const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.TableName}}"
+const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.DbName}}"
 
 type {{.GoFriendlyName}} struct {
 	{{range .Columns}}{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
@@ -78,7 +78,7 @@ func (utilRef *t{{.ParentTable.GoFriendlyName}}Utils) {{$functionName}}{{.GoName
 	{{end}}
 
 	// define the select query
-	var query = "{{.ParentTable.GenericSelectQuery}} WHERE {{.Name}} = $1";
+	var query = "{{.ParentTable.GenericSelectQuery}} WHERE {{.DbName}} = $1";
 
 	// we are aiming for a single row so we will use Query Row	
 	err = currentDbHandle.QueryRow(query, {{$sourceParam }}).Scan({{range $i, $e := .ParentTable.Columns}}&param{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
@@ -124,7 +124,7 @@ func (utilRef *t{{.ParentTable.GoFriendlyName}}Utils) {{$functionName}}` +
 	{{end}}
 
 	// define the select query
-	var query = "{{.ParentTable.GenericSelectQuery}} WHERE {{range $i, $e := .ParentTable.PKColumns}}{{.Name}} = ${{print (plus1 $i)}}{{if ne (plus1 $i) $pkColCount}} AND {{end}}{{end}}";
+	var query = "{{.ParentTable.GenericSelectQuery}} WHERE {{range $i, $e := .ParentTable.PKColumns}}{{.DbName}} = ${{print (plus1 $i)}}{{if ne (plus1 $i) $pkColCount}} AND {{end}}{{end}}";
 
 	// we are aiming for a single row so we will use Query Row	
 	err = currentDbHandle.QueryRow(query, ` +

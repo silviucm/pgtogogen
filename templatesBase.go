@@ -13,6 +13,7 @@ import (
 	"github.com/silviucm/pgx"	
 	"errors"
 	"log"
+	"time"
 )
 
 // Wrapper structure over the pgx transaction package, so we don't need to import
@@ -130,19 +131,38 @@ func InitDatabaseMinimal(host string, port uint16, user, pass, dbName string, po
 // Begins and returns a transaction using the default isolation level.
 // Unlike TxWrap, it is the responsibility of the caller to commit and
 // rollback the transaction if necessary.
-func TxBegin() (*pgx.Tx, error) {	
-	return GetDb().Begin()
-}
+func TxBegin() (*Transaction, error) {
 
+	txWrapper := &Transaction{}
+	tx, err := GetDb().Begin()
+
+	if err != nil {
+		return nil, err
+	} else {
+		txWrapper.Tx = tx
+		return txWrapper, nil
+	}
+
+}
 
 // Begins and returns a transaction using the specified isolation level.
 // The following global variables can be passed:
-// {{.PackageName}}.IsoLevelSerializable
-// {{.PackageName}}.IsoLevelRepeatableRead
-// {{.PackageName}}.IsoLevelReadCommitted
-// {{.PackageName}}.IsoLevelReadUncommitted
-func TxBeginIso(isolationLevel string) (*pgx.Tx, error) {	
-	return GetDb().BeginIso(isolationLevel)
+// models.IsoLevelSerializable
+// models.IsoLevelRepeatableRead
+// models.IsoLevelReadCommitted
+// models.IsoLevelReadUncommitted
+func TxBeginIso(isolationLevel string) (*Transaction, error) {
+
+	txWrapper := &Transaction{}
+	tx, err := GetDb().BeginIso(isolationLevel)
+
+	if err != nil {
+		return nil, err
+	} else {
+		txWrapper.Tx = tx
+		return txWrapper, nil
+	}
+
 }
 
 func TxWrap(wrapperFunc func(tx *Transaction) error) error {
@@ -231,6 +251,10 @@ func GetGoTypeForColumn(columnType string) (typeReturn string, goTypeToImport st
 
 	return typeReturn, goTypeToImport
 }
+
+func Now() time.Time {
+	return time.Now()
+}
 `
 
 const BASE_TEMPLATE_SETTINGS = `package {{.PackageName}}
@@ -266,6 +290,16 @@ type stTables struct {
 }
 
 var Tables stTables
+{{end}}
+
+{{if and .Views (lt 0 (len .Views))}}
+// Container struct for view collections
+type stViews struct {
+	{{range .Views}}{{.GoFriendlyName}} t{{.GoFriendlyName}}Utils
+	{{end}}	
+}
+
+var Views stViews
 {{end}}
 
 // This gets called in case of a successful InitDatabase() call.

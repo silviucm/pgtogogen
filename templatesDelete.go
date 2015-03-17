@@ -4,7 +4,7 @@ package main
 
 const TABLE_STATIC_DELETE_TEMPLATE = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := "Delete"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Deletes the row from the {{.TableName}} table, corresponding to the supplied condition 
+// Deletes the row from the {{.DbName}} table, corresponding to the supplied condition 
 // and the respective parameters. The condition must not include the WHERE keyword.
 // Returns the number of deleted rows (zero if no rows found for that condition), and nil error for a successful operation.
 // If operation fails, it returns zero and the error.
@@ -13,7 +13,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(condition string, pa
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
 
 	if condition == "" {
-		return 0, NewModelsErrorLocal(errorPrefix, "No condition specified. Please use DeleteAll method to delete all rows from {{.TableName}}")
+		return 0, NewModelsErrorLocal(errorPrefix, "No condition specified. Please use DeleteAll method to delete all rows from {{.DbName}}")
 	}
 	
 	currentDbHandle := GetDb()
@@ -23,7 +23,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(condition string, pa
 
 	// define the delete query
 	queryBuffer := bytes.Buffer{}
-	_, writeErr := queryBuffer.WriteString("DELETE FROM {{.TableName}} WHERE ")
+	_, writeErr := queryBuffer.WriteString("DELETE FROM {{.DbName}} WHERE ")
 	if writeErr != nil {
 		return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString error:",writeErr)
 	}
@@ -46,7 +46,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(condition string, pa
 
 const TABLE_STATIC_DELETE_TEMPLATE_TX = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := print "Delete" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Deletes the row from the {{.TableName}} table, corresponding to the supplied condition 
+// Deletes the row from the {{.DbName}} table, corresponding to the supplied condition 
 // and the respective parameters. The condition must not include the WHERE keyword.
 // Returns the number of deleted rows (zero if no rows found for that condition), and nil error for a successful operation.
 // If operation fails, it returns zero and the error.
@@ -55,7 +55,7 @@ func (txWrapper *Transaction) {{$functionName}}(condition string, params ...inte
 	var errorPrefix = "txWrapper.{{$functionName}}() ERROR: "
 
 	if condition == "" {
-		return 0, NewModelsErrorLocal(errorPrefix, "No condition specified. Please use DeleteAll method to delete all rows from {{.TableName}}")
+		return 0, NewModelsErrorLocal(errorPrefix, "No condition specified. Please use DeleteAll method to delete all rows from {{.DbName}}")
 	}
 	
 	if txWrapper == nil { return 0, NewModelsErrorLocal(errorPrefix, "the transaction wrapper is nil") }
@@ -63,7 +63,7 @@ func (txWrapper *Transaction) {{$functionName}}(condition string, params ...inte
 
 	// define the delete query
 	queryBuffer := bytes.Buffer{}
-	_, writeErr := queryBuffer.WriteString("DELETE FROM {{.TableName}} WHERE ")
+	_, writeErr := queryBuffer.WriteString("DELETE FROM {{.DbName}} WHERE ")
 	if writeErr != nil {
 		return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString error:",writeErr)
 	}
@@ -86,7 +86,7 @@ func (txWrapper *Transaction) {{$functionName}}(condition string, params ...inte
 
 const TABLE_STATIC_DELETE_ALL_TEMPLATE = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := "DeleteAll"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Deletes all existing rows from the {{.TableName}} table.
+// Deletes all existing rows from the {{.DbName}} table.
 // Returns the number of deleted rows (zero if no rows found), and nil error for a successful operation.
 // If operation fails, it returns zero and the error.
 func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() (int64,  error) {
@@ -98,7 +98,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() (int64,  error) {
 		return 0, NewModelsErrorLocal(errorPrefix, "the database handle is nil")
 	}
 	
-	r, err := currentDbHandle.Exec("DELETE FROM {{.TableName}}")
+	r, err := currentDbHandle.Exec("DELETE FROM {{.DbName}}")
 	if err != nil {
 		return 0, NewModelsError(errorPrefix + "currentDbHandle.Exec error:",err)
 	}
@@ -111,7 +111,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() (int64,  error) {
 
 const TABLE_STATIC_DELETE_ALL_TEMPLATE_TX = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := print "DeleteAll" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Deletes all existing rows from the {{.TableName}} table.
+// Deletes all existing rows from the {{.DbName}} table.
 // Returns the number of deleted rows (zero if no rows found), and nil error for a successful operation.
 // If operation fails, it returns zero and the error.
 func (txWrapper *Transaction) {{$functionName}}() (int64,  error) {
@@ -121,7 +121,7 @@ func (txWrapper *Transaction) {{$functionName}}() (int64,  error) {
 	if txWrapper == nil { return 0, NewModelsErrorLocal(errorPrefix, "the transaction wrapper is nil") }
 	if txWrapper.Tx == nil { return 0, NewModelsErrorLocal(errorPrefix, "the transaction object is nil") }
 	
-	r, err := txWrapper.Tx.Exec("DELETE FROM {{.TableName}}")
+	r, err := txWrapper.Tx.Exec("DELETE FROM {{.DbName}}")
 	if err != nil {
 		return 0, NewModelsError(errorPrefix + "currentDbHandle.Exec error:",err)
 	}
@@ -134,7 +134,7 @@ func (txWrapper *Transaction) {{$functionName}}() (int64,  error) {
 
 const TABLE_STATIC_DELETE_INSTANCE_TEMPLATE = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := "DeleteInstance"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Deletes the row from the {{.TableName}} table, corresponding to the primary key fields
+// Deletes the row from the {{.DbName}} table, corresponding to the primary key fields
 // inside the {{$sourceStructName}} parameter.
 // Returns true if the row was deleted, or false and nil error if no such PK value was found in the database.
 // If operation fails, it returns nil and the error.
@@ -147,7 +147,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 	}	
 
 	// define the condition based on the PK columns
-	var deleteInstanceQueryCondition string = "	{{range $i, $e := .PKColumns}}{{.Name}} = ${{print (plus1 $i)}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}"
+	var deleteInstanceQueryCondition string = "	{{range $i, $e := .PKColumns}}{{.DbName}} = ${{print (plus1 $i)}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}"
 
 	rowCount, err := Tables.{{.GoFriendlyName}}.Delete(deleteInstanceQueryCondition, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
 	if err != nil {
@@ -165,7 +165,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 
 const TABLE_STATIC_DELETE_INSTANCE_TEMPLATE_TX = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := print "DeleteInstance" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Deletes the row from the {{.TableName}} table, corresponding to the primary key fields
+// Deletes the row from the {{.DbName}} table, corresponding to the primary key fields
 // inside the {{$sourceStructName}} parameter.
 // Returns true if the row was deleted, or false and nil error if no such PK value was found in the database.
 // If operation fails, it returns nil and the error.
@@ -182,7 +182,7 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 		
 
 	// define the condition based on the PK columns
-	var deleteInstanceQueryCondition string = "	{{range $i, $e := .PKColumns}}{{.Name}} = ${{print (plus1 $i)}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}"
+	var deleteInstanceQueryCondition string = "	{{range $i, $e := .PKColumns}}{{.DbName}} = ${{print (plus1 $i)}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}"
 
 	rowCount, err := txWrapper.Delete{{.GoFriendlyName}}(deleteInstanceQueryCondition, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
 	if err != nil {

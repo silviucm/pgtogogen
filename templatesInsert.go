@@ -4,7 +4,7 @@ package main
 
 const TABLE_STATIC_INSERT_TEMPLATE_ATOMIC = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := "Insert"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Inserts a new row into the {{.TableName}} table, using the values
+// Inserts a new row into the {{.DbName}} table, using the values
 // inside the pointer to a {{.GoFriendlyName}} structure passed to it.
 // Returns back the pointer to the structure with all the fields, including the PK fields.
 // If operation fails, it returns nil and the error
@@ -72,7 +72,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 
 const TABLE_STATIC_INSERT_TEMPLATE_TX = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := print "Insert" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Inserts a new row into the {{.TableName}} table, within the supplied transaction wrapper,
+// Inserts a new row into the {{.DbName}} table, within the supplied transaction wrapper,
 // using the pointer to a {{.GoFriendlyName}} structure passed to it.
 // Returns back the pointer to the structure with all the fields, including the PK fields.
 // If operation fails, it returns nil and the error. It does not rollback the transaction itself.
