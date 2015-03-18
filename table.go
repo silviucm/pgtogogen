@@ -465,9 +465,20 @@ func (tbl *Table) GenerateSelectFunctions() {
 func (tbl *Table) GenerateInsertFunctions() {
 
 	tbl.generateAndAppendTemplate("tableInsertFunctionTemplate", TABLE_STATIC_INSERT_TEMPLATE_ATOMIC, "")
-	tbl.generateAndAppendTemplate("tableInsertFunctionTemplate", TABLE_STATIC_INSERT_TEMPLATE_TX, "")
+	tbl.generateAndAppendTemplate("tableInsertFunctionTemplateTx", TABLE_STATIC_INSERT_TEMPLATE_TX, "")
 
 	fmt.Println("Table insert functions generated.")
+
+}
+
+func (tbl *Table) GenerateUpdateFunctions() {
+
+	tbl.generateAndAppendTemplate("tableUpdateFunctionTemplate", TABLE_STATIC_UPDATE_TEMPLATE, "")
+	tbl.generateAndAppendTemplate("tableUpdateFunctionTemplateTx", TABLE_STATIC_UPDATE_TEMPLATE_TX, "")
+
+	tbl.generateAndAppendTemplate("tableUpdateWithMaskFunctionTemplate", TABLE_STATIC_UPDATE_WITH_MASK, "")
+
+	fmt.Println("Table update functions generated.")
 
 }
 

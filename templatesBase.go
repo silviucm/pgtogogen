@@ -13,6 +13,7 @@ import (
 	"github.com/silviucm/pgx"	
 	"errors"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -252,9 +253,36 @@ func GetGoTypeForColumn(columnType string) (typeReturn string, goTypeToImport st
 	return typeReturn, goTypeToImport
 }
 
+// Wrapper over time package Now method
 func Now() time.Time {
 	return time.Now()
 }
+
+// Wrapper over strconv package Itoa method
+func Itoa(intValue int) string {
+	return strconv.Itoa(intValue)
+}
+
+// Sort comparator for string type
+func LessComparatorFor_string(first, second string) bool { return first < second }
+
+// Sort comparator for int type
+func LessComparatorFor_int(first, second int) bool { return first < second }
+
+// Sort comparator for int32 type
+func LessComparatorFor_int32(first, second int32) bool { return first < second }
+
+// Sort comparator for int64 type
+func LessComparatorFor_int64(first, second int64) bool { return first < second }
+
+// Sort comparator for bool type
+func LessComparatorFor_bool(first, second bool) bool { return first == false }
+
+// Because LessComparatorFor_time.Time would break the compiler if a function would be
+// defined as such (due to the dot) we need to create a fake struct
+type tLessComparatorFor_time struct {}
+var LessComparatorFor_time *tLessComparatorFor_time
+func (t *tLessComparatorFor_time) Time(first, second time.Time) bool {  return first.Before(second) }
 `
 
 const BASE_TEMPLATE_SETTINGS = `package {{.PackageName}}

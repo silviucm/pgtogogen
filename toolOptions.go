@@ -137,6 +137,9 @@ func (t *ToolOptions) Generate() {
 			// generate the insert-related functions
 			t.Tables[i].GenerateInsertFunctions()
 
+			// generate the update-related functions
+			t.Tables[i].GenerateUpdateFunctions()
+
 			// generate the delete-related functions
 			t.Tables[i].GenerateDeleteFunctions()
 

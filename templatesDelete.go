@@ -1,6 +1,6 @@
 package main
 
-/* Insert Functions Templates */
+/* Delete Functions Templates */
 
 const TABLE_STATIC_DELETE_TEMPLATE = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := "Delete"}}{{$sourceStructName := print "source" .GoFriendlyName}}

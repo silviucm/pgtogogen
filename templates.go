@@ -29,13 +29,40 @@ const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.DbName}}"
 type {{.GoFriendlyName}} struct {
 	{{range .Columns}}{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
 	{{end}}	
-	PgToGo_IgnorePKValuesWhenInsertingAndUseSequence bool // set this to true if you want Inserts to ignore the PK fields	
+	
+	// Set this to true if you want Inserts to ignore the PK fields	
+	PgToGo_IgnorePKValuesWhenInsertingAndUseSequence bool 
+	
 }
+
+{{ $tableGoName := .GoFriendlyName}}
+/* Sorting helper containers */
+{{range $i, $e := .Columns}}
+// By{{$e.GoName}} implements sort.Interface for []{{$tableGoName}} based on
+// the {{$e.GoName}} field. Usage: sort.Sort(Sort{{$tableGoName}}By{{$e.GoName}}(anyGiven{{$tableGoName}}Slice))
+type Sort{{$tableGoName}}By{{$e.GoName}} []{{$tableGoName}}
+
+func (a Sort{{$tableGoName}}By{{$e.GoName}}) Len() int           { return len(a) }
+func (a Sort{{$tableGoName}}By{{$e.GoName}}) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a Sort{{$tableGoName}}By{{$e.GoName}}) Less(i, j int) bool { return LessComparatorFor_{{$e.GoType}}(a[i].{{$e.GoName}},a[j].{{$e.GoName}}) }
+{{end}}
+
 
 // fake, interal type to allow a singleton structure that would hold static-like methods
 type t{{.GoFriendlyName}}Utils struct {
 	PgToGo_IgnorePKValuesWhenInsertingAndUseSequence bool // set this to true if you want Inserts to ignore the PK fields	
 }
+
+// Returns the database field name, regardless whether the Go name or the db name was provided.
+// If no field was found, return empty string.
+func (utilRef *t{{.GoFriendlyName}}Utils) ToDbFieldName(fieldDbOrGoName string) string {
+	
+	{{range $i, $e := .Columns}}if fieldDbOrGoName == "{{$e.GoName}}" || fieldDbOrGoName == "{{$e.DbName}}" { return "{{$e.DbName}}" }			
+	{{end}}
+
+	return ""
+}
+
 `
 
 const TABLE_TEMPLATE_CUSTOM = `package {{.Options.PackageName}}
