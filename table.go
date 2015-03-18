@@ -29,6 +29,7 @@ type Table struct {
 
 	DbName         string
 	GoFriendlyName string
+	DbComments     string
 
 	GoTypesToImport map[string]string
 
@@ -268,6 +269,50 @@ func (tbl *Table) CollectForeignKeys() error {
 	}
 
 	return nil
+}
+
+func (tbl *Table) CollectComments() error {
+
+	var currentComment string
+	var currentObjsubid int32
+
+	var commentsQuery string = `select description as object_comment, objsubid 
+		from pg_description join pg_class on pg_description.objoid = pg_class.oid join pg_namespace on pg_class.relnamespace = pg_namespace.oid
+		where relname=$1 and nspname=$2 order by objsubid`
+
+	rows, err := tbl.ConnectionPool.Query(commentsQuery, tbl.DbName, tbl.Options.DbSchema)
+
+	if err != nil {
+		log.Fatal("CollectComments() fatal error running the query:", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err := rows.Scan(&currentComment, &currentObjsubid)
+		if err != nil {
+			log.Fatal("CollectComments() fatal error inside rows.Next() iteration: ", err)
+		}
+
+		// the table comment is the one with objsubid == 0
+		if currentObjsubid == 0 {
+			tbl.DbComments = currentComment
+		} else {
+			if tbl.Columns != nil {
+				if len(tbl.Columns) > 0 {
+					tbl.Columns[(int(currentObjsubid) - 1)].DbComments = currentComment
+				}
+			}
+		}
+
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
+
 }
 
 func (tbl *Table) AddGoTypeToImport(goTypeToImport string) {

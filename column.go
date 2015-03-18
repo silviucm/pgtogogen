@@ -16,6 +16,7 @@ type Column struct {
 	ParentTable    *Table
 
 	DbName       string
+	DbComments   string
 	Type         string
 	MaxLength    int
 	DefaultValue pgx.NullString

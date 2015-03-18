@@ -26,8 +26,11 @@ import (
 
 const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.DbName}}"
 
+{{if ne .DbComments ""}}/* {{.DbComments}} */{{end}}
 type {{.GoFriendlyName}} struct {
-	{{range .Columns}}{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
+	{{range .Columns}}{{if ne .DbComments ""}}/* {{.DbComments}} */
+	{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
+	{{else}}{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}{{end}}
 	{{end}}	
 	
 	// Set this to true if you want Inserts to ignore the PK fields	

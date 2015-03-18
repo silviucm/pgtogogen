@@ -331,6 +331,11 @@ func (t *ToolOptions) CollectTables() error {
 		// generate the typical select sql queries
 		currentTable.CreateGenericQueries()
 
+		// collect the comments for the table and the columns
+		if err = currentTable.CollectComments(); err != nil {
+			log.Fatal("CollectTables(): CollectComments method for table ", currentTable.DbName, " FATAL error: ", err)
+		}
+
 		// add the table to the slice
 		t.Tables = append(t.Tables, *currentTable)
 
