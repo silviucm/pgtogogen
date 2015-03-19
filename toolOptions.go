@@ -234,16 +234,17 @@ func (t *ToolOptions) WriteFiles() {
 
 func (t *ToolOptions) WriteBaseFiles() {
 
-	t.writeBaseTemplateFileFile("main base file", BASE_TEMPLATE, "modelsBase.go", true)
-	t.writeBaseTemplateFileFile("db settings base file", BASE_TEMPLATE_SETTINGS, "modelsDbSettings.go", false)
-	t.writeBaseTemplateFileFile("collections base file", BASE_TEMPLATE_COLLECTIONS, "modelsCollections.go", false)
+	t.writeBaseTemplateFile("main base file", BASE_TEMPLATE, "modelsBase.go", true)
+	t.writeBaseTemplateFile("db settings base file", BASE_TEMPLATE_SETTINGS, "modelsDbSettings.go", false)
+	t.writeBaseTemplateFile("collections base file", BASE_TEMPLATE_COLLECTIONS, "modelsCollections.go", false)
+	t.writeBaseTemplateFile("collections base file", BASE_TEMPLATE_FORMS, "modelsForms.go", false)
 
 }
 
 // Generates the base file of the package that contains initialization functions,
 // convenience functions to get the database handle, query preparing, etc
 
-func (t *ToolOptions) writeBaseTemplateFileFile(templateName, templateContent string, baseFilename string, overwritable bool) {
+func (t *ToolOptions) writeBaseTemplateFile(templateName, templateContent string, baseFilename string, overwritable bool) {
 
 	tmpl, err := template.New(templateName).Parse(templateContent)
 	if err != nil {

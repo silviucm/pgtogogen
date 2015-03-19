@@ -20,8 +20,9 @@ const TABLE_TEMPLATE = `package {{.Options.PackageName}}
 
 import (
 	"bytes"
+	"net/http"
 	{{range $key, $value := .GoTypesToImport}}"{{$value}}"
-	{{end}}
+	{{end}}	
 )
 
 const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.DbName}}"
@@ -55,6 +56,46 @@ func (a Sort{{$tableGoName}}By{{$e.GoName}}) Less(i, j int) bool { return LessCo
 type t{{.GoFriendlyName}}Utils struct {
 	PgToGo_IgnorePKValuesWhenInsertingAndUseSequence bool // set this to true if you want Inserts to ignore the PK fields	
 }
+{{$colCount := len .Columns}}{{$functionName := "CreateFromHttpRequest"}}
+// Creates a new pointer to a KiriUser from an Http Request.
+// The parameters are expected to match the struct field names
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) (*{{.GoFriendlyName}}, error) {
+	
+	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
+	
+	if req == nil {
+		return nil, NewModelsErrorLocal(errorPrefix, "The *http.Request parameter provided was nil.")
+	}	
+	
+	var err error = nil
+	{{$structInstanceName := print "new" .GoFriendlyName}}{{$structInstanceName}} := &{{.GoFriendlyName}}{}
+	
+	{{range $i, $e := .Columns}}{{if eq $e.GoType "time.Time"}}{{$structInstanceName}}.{{$e.GoName}}, err = To_Time_FromString(req.FormValue("{{$e.GoName}}"))	
+	{{else if eq $e.GoType "string"}}{{$structInstanceName}}.{{$e.GoName}} = req.FormValue("{{$e.GoName}}")
+	{{else}}{{$structInstanceName}}.{{$e.GoName}}, err = To_{{$e.GoType}}_FromString(req.FormValue("{{$e.GoName}}"))
+	{{end}}if err != nil { return nil, NewModelsError(errorPrefix, err) }
+	{{end}}
+
+	return {{$structInstanceName}}, nil
+}
+
+{{$colCount := len .Columns}}{{$functionName := "CreateFromHttpRequestIgnoreErrors"}}
+// Creates a new pointer to a KiriUser from an Http Request.
+// The parameters are expected to match the struct field names
+// Unlike CreateFromHttpRequest, this method completely ignores parsing errors, 
+// so you will have to call Validate() on the structure if that structure has such a method.
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) *{{.GoFriendlyName}} {
+	
+	{{$structInstanceName := print "new" .GoFriendlyName}}{{$structInstanceName}} := &{{.GoFriendlyName}}{}
+	
+	{{range $i, $e := .Columns}}{{if eq $e.GoType "time.Time"}}{{$structInstanceName}}.{{$e.GoName}}, _ = To_Time_FromString(req.FormValue("{{$e.GoName}}"))	
+	{{else if eq $e.GoType "string"}}{{$structInstanceName}}.{{$e.GoName}} = req.FormValue("{{$e.GoName}}")
+	{{else}}{{$structInstanceName}}.{{$e.GoName}}, _ = To_{{$e.GoType}}_FromString(req.FormValue("{{$e.GoName}}"))
+	{{end}}
+	{{end}}
+
+	return {{$structInstanceName}}
+}
 
 // Returns the database field name, regardless whether the Go name or the db name was provided.
 // If no field was found, return empty string.
@@ -82,6 +123,15 @@ import (
 	{{end}}	
 )
 */
+
+// Implements the Validator interface. 
+func (t *{{.GoFriendlyName}}) Validate() (bool, []error) {
+
+	// Returns true for now. 
+	// Todo: modify as needed
+	return true, nil
+
+}	
 
 `
 
