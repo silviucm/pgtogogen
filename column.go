@@ -30,6 +30,7 @@ type Column struct {
 
 	GoName string
 	GoType string
+	IsGuid bool
 
 	ColumnComment string
 }

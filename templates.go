@@ -36,6 +36,14 @@ type {{.GoFriendlyName}} struct {
 	
 	// Set this to true if you want Inserts to ignore the PK fields	
 	PgToGo_IgnorePKValuesWhenInsertingAndUseSequence bool 
+
+	// Set this to true if you want New or Create operations to automatically
+	// set all time.Time (datetime) fields to time.Now()
+	PgToGo_SetDateTimeFieldsToNowForNewRecords bool 
+
+	// Set this to true if you want New or Create operations to automatically
+	// set all Guid fields to a new guid
+	PgToGo_SetGuidFieldsToNewGuidsNewRecords bool
 	
 }
 
@@ -51,11 +59,23 @@ func (a Sort{{$tableGoName}}By{{$e.GoName}}) Swap(i, j int)      { a[i], a[j] = 
 func (a Sort{{$tableGoName}}By{{$e.GoName}}) Less(i, j int) bool { return LessComparatorFor_{{$e.GoType}}(a[i].{{$e.GoName}},a[j].{{$e.GoName}}) }
 {{end}}
 
+// fake, internal type to allow a singleton structure that would hold static-like methods
+type t{{.GoFriendlyName}}Utils struct {}
 
-// fake, interal type to allow a singleton structure that would hold static-like methods
-type t{{.GoFriendlyName}}Utils struct {
-	PgToGo_IgnorePKValuesWhenInsertingAndUseSequence bool // set this to true if you want Inserts to ignore the PK fields	
+{{$colCount := len .Columns}}{{$functionName := "New"}}
+// Creates a new pointer to a blank KiriUser structure.
+// Some of the fields, such as the time.Time ones, might be already set to time.Now()
+// based on the Tables.PgToGo_SetDateTimeFieldsToNowForNewRecords setting
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() *{{.GoFriendlyName}} {
+	
+	
+	{{$structInstanceName := print "new" .GoFriendlyName}}{{$structInstanceName}} := &{{.GoFriendlyName}}{}		
+	
+	{{$structInstanceName}}.CloneGlobalSettings()
+	
+	return {{$structInstanceName}}
 }
+
 {{$colCount := len .Columns}}{{$functionName := "CreateFromHttpRequest"}}
 // Creates a new pointer to a KiriUser from an Http Request.
 // The parameters are expected to match the struct field names
@@ -69,6 +89,8 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) (
 	
 	var err error = nil
 	{{$structInstanceName := print "new" .GoFriendlyName}}{{$structInstanceName}} := &{{.GoFriendlyName}}{}
+	
+	{{$structInstanceName}}.CloneGlobalSettings()
 	
 	{{range $i, $e := .Columns}}{{if eq $e.GoType "time.Time"}}{{$structInstanceName}}.{{$e.GoName}}, err = To_Time_FromString(req.FormValue("{{$e.GoName}}"))	
 	{{else if eq $e.GoType "string"}}{{$structInstanceName}}.{{$e.GoName}} = req.FormValue("{{$e.GoName}}")
@@ -88,6 +110,8 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) *
 	
 	{{$structInstanceName := print "new" .GoFriendlyName}}{{$structInstanceName}} := &{{.GoFriendlyName}}{}
 	
+	{{$structInstanceName}}.CloneGlobalSettings()
+	
 	{{range $i, $e := .Columns}}{{if eq $e.GoType "time.Time"}}{{$structInstanceName}}.{{$e.GoName}}, _ = To_Time_FromString(req.FormValue("{{$e.GoName}}"))	
 	{{else if eq $e.GoType "string"}}{{$structInstanceName}}.{{$e.GoName}} = req.FormValue("{{$e.GoName}}")
 	{{else}}{{$structInstanceName}}.{{$e.GoName}}, _ = To_{{$e.GoType}}_FromString(req.FormValue("{{$e.GoName}}"))
@@ -95,6 +119,20 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) *
 	{{end}}
 
 	return {{$structInstanceName}}
+}
+
+{{$colCount := len .Columns}}{{$functionName := "CloneGlobalSettings"}}{{$structInstanceName := print "instance" .GoFriendlyName}}
+// Assigns the global settings for operations to the control fields of this instance
+// An example would be:
+// {{$structInstanceName}}.PgToGo_IgnorePKValuesWhenInsertingAndUseSequence = Tables.PgToGo_IgnorePKValuesWhenInsertingAndUseSequence
+func (instance *{{.GoFriendlyName}}) {{$functionName}}() {
+			
+	
+	instance.PgToGo_IgnorePKValuesWhenInsertingAndUseSequence = Tables.PgToGo_IgnorePKValuesWhenInsertingAndUseSequence
+	instance.PgToGo_SetDateTimeFieldsToNowForNewRecords = Tables.PgToGo_SetDateTimeFieldsToNowForNewRecords
+	instance.PgToGo_SetGuidFieldsToNewGuidsNewRecords = Tables.PgToGo_SetGuidFieldsToNewGuidsNewRecords
+	
+	
 }
 
 // Returns the database field name, regardless whether the Go name or the db name was provided.

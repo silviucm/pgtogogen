@@ -41,6 +41,14 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 	
 	var err error
 
+	if {{$sourceStructName}}.PgToGo_SetDateTimeFieldsToNowForNewRecords {
+		{{range $i, $e := .Columns}}{{if eq .GoType "time.Time"}}{{$sourceStructName}}.{{$e.GoName}}=Now(){{end}}{{end}}
+	}
+
+	if {{$sourceStructName}}.PgToGo_SetGuidFieldsToNewGuidsNewRecords {
+		{{range $i, $e := .Columns}}{{if .IsGuid }}{{$sourceStructName}}.{{$e.GoName}}=NewGuid(){{end}}{{end}}
+	}
+
 	// define the values to be passed, from the structure
 	var  {{.ColumnsString}} = {{range $i, $e := .Columns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
 	
@@ -106,6 +114,14 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 	// with a standard Query or QueryRow call
 	
 	var err error
+
+	if {{$sourceStructName}}.PgToGo_SetDateTimeFieldsToNowForNewRecords {
+		{{range $i, $e := .Columns}}{{if eq .GoType "time.Time"}}{{$sourceStructName}}.{{$e.GoName}}=Now(){{end}}{{end}}
+	}
+
+	if {{$sourceStructName}}.PgToGo_SetGuidFieldsToNewGuidsNewRecords {
+		{{range $i, $e := .Columns}}{{if .IsGuid }}{{$sourceStructName}}.{{$e.GoName}}=NewGuid(){{end}}{{end}}
+	}
 
 	// define the values to be passed, from the structure
 	var  {{.ColumnsString}} = {{range $i, $e := .Columns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}

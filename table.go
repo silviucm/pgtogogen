@@ -93,6 +93,7 @@ func (tbl *Table) CollectColumns() error {
 
 			ConnectionPool: tbl.ConnectionPool,
 			Options:        tbl.Options,
+			IsGuid:         (dataType == "uuid"),
 		}
 
 		tbl.Columns = append(tbl.Columns, *currentColumn)

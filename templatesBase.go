@@ -15,6 +15,7 @@ import (
 	"log"
 	"strconv"
 	"time"
+ 	"github.com/twinj/uuid"
 )
 
 // Wrapper structure over the pgx transaction package, so we don't need to import
@@ -259,6 +260,11 @@ func Now() time.Time {
 	return time.Now()
 }
 
+// Returns a new Guid
+func NewGuid() string {
+	return uuid.NewV4().String()
+}
+
 // Wrapper over strconv package Itoa method
 func Itoa(intValue int) string {
 	return strconv.Itoa(intValue)
@@ -376,6 +382,14 @@ type stTables struct {
 	{{range .Tables}}{{.GoFriendlyName}} t{{.GoFriendlyName}}Utils
 	{{end}}
 	PgToGo_IgnorePKValuesWhenInsertingAndUseSequence bool // set this to true if you want Inserts to ignore the PK fields
+
+	// Set this to true if you want New or Create operations to automatically
+	// set all time.Time (datetime) fields to time.Now()
+	PgToGo_SetDateTimeFieldsToNowForNewRecords bool 
+
+	// Set this to true if you want New or Create operations to automatically
+	// set all Guid fields to a new guid
+	PgToGo_SetGuidFieldsToNewGuidsNewRecords bool
 }
 
 var Tables stTables
@@ -401,6 +415,16 @@ func PrepareDbCollections() {
 	// by setting this to true, the inserts will assume PKs are inserted by the database
 	// so whatever PK id is set in the structure will be ignored for insert operations
 	Tables.PgToGo_IgnorePKValuesWhenInsertingAndUseSequence = true
+
+	// by setting this to true, whenever a New() or CreateFrom...() method is called
+	// to generate a new table instance struct, the time.Time fields will be automatically
+	// populate to time.Now()
+	Tables.PgToGo_SetDateTimeFieldsToNowForNewRecords = true
+
+	// by setting this to true, whenever a New() or CreateFrom...() method is called
+	// to generate a new table instance struct, the Guid fields will be automatically
+	// populated with a newly generated Guid
+	Tables.PgToGo_SetGuidFieldsToNewGuidsNewRecords = true
 		
 	{{end}}
 }
