@@ -7,6 +7,9 @@ var fns = template.FuncMap{
 	"plus1": func(x int) int {
 		return x + 1
 	},
+	"plus": func(x int, y int) int {
+		return x + y
+	},
 }
 
 /* Tables */

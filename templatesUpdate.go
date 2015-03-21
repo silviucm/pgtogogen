@@ -187,3 +187,179 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 	
 }
 `
+
+const TABLE_STATIC_UPDATE_WITH_MASK_TX = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
+{{$functionName := print "UpdateWithMask" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
+// Updates the rows inside the {{.DbName}} table, based on the supplied condition  and the respective parameters. 
+// The condition must not include the WHERE keyword.  Make sure to start the dollar-prefixed params 
+// inside the condition from the number of elements supplied in the update mask, plus one.
+// Only the fields in the supplied mask slice of strings will be updated. If the mask is nil, all fields will be updated.
+// Returns the number of affected rows (zero if no rows found for that condition), and nil error for a successful operation.
+// If operation fails, it returns zero and the error.
+func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}, updateMask []string, condition string, params ...interface{}) (int64,  error) {
+						
+	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
+
+	if condition == "" {
+		return 0, NewModelsErrorLocal(errorPrefix, "No condition specified. Please use UpdateAll method to update all rows inside {{.DbName}}")
+	}
+
+	if updateMask == nil {
+		return 0, NewModelsErrorLocal(errorPrefix, "No update mask specified. Please use Update or UpdateAll method to update all fields.")
+	}
+	if len(updateMask) == 0 {
+		return 0, NewModelsErrorLocal(errorPrefix, "No update mask specified. Please use Update or UpdateAll method to update all fields.")
+	}
+	
+	if txWrapper == nil { return 0, NewModelsErrorLocal(errorPrefix, "the transaction wrapper is nil") }
+	if txWrapper.Tx == nil { return 0, NewModelsErrorLocal(errorPrefix, "the transaction object is nil") }
+
+
+	// define the delete query
+	queryBuffer := bytes.Buffer{}
+	_, writeErr := queryBuffer.WriteString("UPDATE {{.DbName}} SET ")
+	if writeErr != nil {
+		return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString error:",writeErr)
+	}
+	
+	var instanceValuesSlice []interface{}
+	for i,e := range updateMask {
+		
+		_, writeErr = queryBuffer.WriteString(Tables.{{.GoFriendlyName}}.ToDbFieldName(e))
+		if writeErr != nil {
+			return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString error (inside range updateMask):",writeErr)
+		}
+
+		_, writeErr = queryBuffer.WriteString("=$")
+		if writeErr != nil {
+			return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString error (inside range updateMask):",writeErr)
+		}
+
+		_, writeErr = queryBuffer.WriteString(Itoa(i+1))
+		if writeErr != nil {
+			return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString error (inside range updateMask):",writeErr)
+		}
+
+		// add a comma if not the final set
+		if len(updateMask) != (i + 1) {
+			_, writeErr = queryBuffer.WriteString(",")
+			if writeErr != nil {
+				return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString error (inside range updateMask):",writeErr)
+			}
+		}
+				
+		{{range $i, $e := .Columns}}if e == "{{$e.GoName}}" || e == "{{$e.DbName}}" { instanceValuesSlice = append(instanceValuesSlice, {{$sourceStructName}}.{{$e.GoName}}) }			
+		{{end}}
+		
+	}
+	
+	_, writeErr = queryBuffer.WriteString(" WHERE ")
+	if writeErr != nil {
+		return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString error:",writeErr)
+	}	
+
+	_, writeErr = queryBuffer.WriteString(condition)
+	if writeErr != nil {
+		return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString (condition param) error:",writeErr)
+	}	
+	
+	// append the condition's params to the ones of the setters
+	allParams := append(instanceValuesSlice, params...)			
+	
+	r, err := txWrapper.Tx.Exec(queryBuffer.String(), allParams...)
+	if err != nil {
+		return 0, NewModelsError(errorPrefix + "db.Exec error:",err)
+	}
+	
+	n := r.RowsAffected()
+	return n, nil	
+	
+}
+`
+
+const TABLE_INSTANCE_UPDATE_TEMPLATE = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
+{{$functionName := "Update"}}{{$sourceStructName := print "source" .GoFriendlyName}}
+// Updates the row inside the {{.DbName}} table, corresponding to the PK of the current {{.GoFriendlyName}} instance.
+// All the fields in the supplied source {{.GoFriendlyName}} pointer will be updated.
+// If you need only certain fields to be updated, you will have to create a custom method, or use UpdateWithMask().
+// Returns nil error for a successful operation. 
+// If operation fails, it returns the error. If more than one row gets updated, it will return an error.
+func ({{$sourceStructName}} *{{.GoFriendlyName}}) {{$functionName}}() error {
+						
+	var errorPrefix = "instance of {{.GoFriendlyName}}.{{$functionName}}() ERROR: "
+	
+	currentDbHandle := GetDb()
+	if currentDbHandle == nil {
+		return NewModelsErrorLocal(errorPrefix, "the database handle is nil")
+	}
+
+	// define the delete query
+	queryBuffer := bytes.Buffer{}
+	_, writeErr := queryBuffer.WriteString("UPDATE {{.DbName}} SET {{range $i, $e := .Columns}}{{$e.DbName}} = ${{(plus1 $i)}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} WHERE ")
+	if writeErr != nil {
+		return NewModelsError(errorPrefix + "queryBuffer.WriteString error:",writeErr)
+	}
+
+	_, writeErr = queryBuffer.WriteString("{{range $i, $e := .PKColumns}}{{$e.DbName}}=${{plus (plus1 $i) $colCount}}{{if ne (plus1 $i) $pkColCount}} AND {{end}}{{end}}")
+	if writeErr != nil {
+		return NewModelsError(errorPrefix + "queryBuffer.WriteString (instance condition param) error:",writeErr)
+	}	
+	
+	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}  }
+	
+	r, err := currentDbHandle.Exec(queryBuffer.String(), instanceValuesSlice...)
+	if err != nil {
+		return NewModelsError(errorPrefix + "db.Exec error:",err)
+	}
+	
+	n := r.RowsAffected()
+	if n > 1 {
+		return  NewModelsErrorLocal(errorPrefix, "More than one record was updated: " + Itoa(int(n)))
+	}
+	return nil	
+	
+}
+`
+
+const TABLE_INSTANCE_UPDATE_TEMPLATE_TX = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
+{{$functionName := print "UpdateSingleInstance" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
+// Updates the row inside the {{.DbName}} table, corresponding to the PK of the current {{.GoFriendlyName}} instance.
+// All the fields in the supplied source {{.GoFriendlyName}} pointer will be updated.
+// If you need only certain fields to be updated, you will have to create a custom method, or use UpdateWithMask().
+// Returns nil error for a successful operation. 
+// If operation fails, it returns the error. If more than one row gets updated, it will return an error.
+func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}) error {
+						
+	var errorPrefix = "instance of {{.GoFriendlyName}}.{{$functionName}}() ERROR: "
+	
+	if txWrapper == nil { return NewModelsErrorLocal(errorPrefix, "the transaction wrapper is nil") }
+	if txWrapper.Tx == nil { return NewModelsErrorLocal(errorPrefix, "the transaction object is nil") }
+
+
+	// define the delete query
+	queryBuffer := bytes.Buffer{}
+	_, writeErr := queryBuffer.WriteString("UPDATE {{.DbName}} SET {{range $i, $e := .Columns}}{{$e.DbName}} = ${{(plus1 $i)}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} WHERE ")
+	if writeErr != nil {
+		return NewModelsError(errorPrefix + "queryBuffer.WriteString error:",writeErr)
+	}
+
+	_, writeErr = queryBuffer.WriteString("{{range $i, $e := .PKColumns}}{{$e.DbName}}=${{plus (plus1 $i) $colCount}}{{if ne (plus1 $i) $pkColCount}} AND {{end}}{{end}}")
+	if writeErr != nil {
+		return NewModelsError(errorPrefix + "queryBuffer.WriteString (instance condition param) error:",writeErr)
+	}	
+	
+	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}  }
+	
+	r, err := txWrapper.Tx.Exec(queryBuffer.String(), instanceValuesSlice...)
+	if err != nil {
+		return NewModelsError(errorPrefix + "db.Exec error:",err)
+	}
+	
+	n := r.RowsAffected()
+	if n > 1 {
+		return  NewModelsErrorLocal(errorPrefix, "More than one record was updated: " + Itoa(int(n)))
+	}
+	return nil	
+	
+}
+`

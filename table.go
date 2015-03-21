@@ -523,6 +523,10 @@ func (tbl *Table) GenerateUpdateFunctions() {
 	tbl.generateAndAppendTemplate("tableUpdateFunctionTemplateTx", TABLE_STATIC_UPDATE_TEMPLATE_TX, "")
 
 	tbl.generateAndAppendTemplate("tableUpdateWithMaskFunctionTemplate", TABLE_STATIC_UPDATE_WITH_MASK, "")
+	tbl.generateAndAppendTemplate("tableUpdateWithMaskFunctionTemplateTx", TABLE_STATIC_UPDATE_WITH_MASK_TX, "")
+
+	tbl.generateAndAppendTemplate("tableInstanceUpdateFunctionTemplate", TABLE_INSTANCE_UPDATE_TEMPLATE, "")
+	tbl.generateAndAppendTemplate("tableInstanceUpdateFunctionTemplateTx", TABLE_INSTANCE_UPDATE_TEMPLATE_TX, "")
 
 	fmt.Println("Table update functions generated.")
 
