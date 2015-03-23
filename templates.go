@@ -217,6 +217,29 @@ func (c *CacheFor{{.GoFriendlyName}}) GetAll() ([]{{.GoFriendlyName}}, error) {
 
 }
 
+// Sets or refreshes the cache for all {{.GoFriendlyName}} records in the database
+func (c *CacheFor{{.GoFriendlyName}}) SetAll(all []{{.GoFriendlyName}}) {
+
+	// if cache provider is nil use memory cache via the built-in
+	// map and mutex combo
+	if c.CacheProvider == nil {
+
+		if all != nil {
+
+			allCopy := make([]{{.GoFriendlyName}}, len(all))
+			copy(allCopy, all)
+
+			c.allMutex.Lock()
+			c.all = allCopy
+			c.allMutex.Unlock()
+		}
+
+	}
+
+	// todo: implement CacheProvider functionality
+
+}
+
 func (c *CacheFor{{.GoFriendlyName}}) GetSlice(key string) ([]{{.GoFriendlyName}}, error) {
 
 	// if cache provider is nil use memory cache via the built-in
