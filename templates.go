@@ -63,8 +63,16 @@ func (a Sort{{$tableGoName}}By{{$e.GoName}}) Swap(i, j int)      { a[i], a[j] = 
 func (a Sort{{$tableGoName}}By{{$e.GoName}}) Less(i, j int) bool { return LessComparatorFor_{{$e.GoType}}(a[i].{{$e.GoName}},a[j].{{$e.GoName}}) }
 {{end}}
 
-// fake, internal type to allow a singleton structure that would hold static-like methods
-type t{{.GoFriendlyName}}Utils struct {}
+// Utility-oriented, internal type to allow a singleton structure that would hold static-like methods
+// and global, single-instance settings
+type t{{.GoFriendlyName}}Utils struct {
+	
+	utilMutex sync.RWMutex
+	
+	// pointer to a cache structure - make sure you instantiate them with
+	// NewCache-series of methods
+	cache *CacheFor{{.GoFriendlyName}}
+}
 
 {{$colCount := len .Columns}}{{$functionName := "New"}}
 // Creates a new pointer to a blank KiriUser structure.
@@ -123,6 +131,63 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) *
 	{{end}}
 
 	return {{$structInstanceName}}
+}
+
+
+{{$colCount := len .Columns}}{{$functionName := "NewCache"}}
+// Creates a new CacheFor{{.GoFriendlyName}} instance and returns it after initializing it.
+// You should not use this directly, but use EnableCache and DisableCache methods
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() *CacheFor{{.GoFriendlyName}} {
+		
+	{{$structInstanceName := print "newCacheFor" .GoFriendlyName}}{{$structInstanceName}} := &CacheFor{{.GoFriendlyName}}{
+		CacheProvider: nil,
+	}		
+	
+	{{$structInstanceName}}.Init()
+	
+	return {{$structInstanceName}}
+}
+
+{{$colCount := len .Columns}}{{$functionName := "EnableCache"}}
+// If not already enabled, creates a new CacheFor{{.GoFriendlyName}} instance and 
+// makes the Cache property of the *t{{.GoFriendlyName}}Utils instance point to a reference of it
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() {
+		
+	if utilRef.cache != nil {
+		return
+	}
+	
+	newCache := utilRef.NewCache()
+
+	utilRef.utilMutex.Lock()
+	utilRef.cache = newCache
+	utilRef.utilMutex.Unlock()
+		
+}
+
+{{$colCount := len .Columns}}{{$functionName := "DisableCache"}}
+// If Cache is enabled, sets the associated CacheFor{{.GoFriendlyName}} pointer to nil
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() {
+		
+	if utilRef.cache == nil {
+		
+		utilRef.utilMutex.Lock()
+		utilRef.cache = nil
+		utilRef.utilMutex.Unlock()
+	}
+	
+}
+
+{{$colCount := len .Columns}}{{$functionName := "GetCache"}}
+// Returns a pointer to the associated CacheFor{{.GoFriendlyName}} instance, or nil if none
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() *CacheFor{{.GoFriendlyName}} {
+		
+	utilRef.utilMutex.RLock()
+	cache := utilRef.cache
+	utilRef.utilMutex.RUnlock()
+	
+	return cache
+	
 }
 
 {{$colCount := len .Columns}}{{$functionName := "CloneGlobalSettings"}}{{$structInstanceName := print "instance" .GoFriendlyName}}
@@ -199,6 +264,14 @@ type CacheFor{{.GoFriendlyName}} struct {
 	CacheProvider ICacheProvider
 }
 
+func (c *CacheFor{{.GoFriendlyName}}) Init() {
+	
+	c.sliceCache = make(map[string][]{{.GoFriendlyName}})
+	c.whereCache = make(map[string][]{{.GoFriendlyName}})
+	c.singleRowCache = make(map[string]{{.GoFriendlyName}})
+	
+} 
+
 func (c *CacheFor{{.GoFriendlyName}}) GetAll() ([]{{.GoFriendlyName}}, error) {
 
 	// if cache provider is nil use memory cache via the built-in
@@ -226,11 +299,11 @@ func (c *CacheFor{{.GoFriendlyName}}) SetAll(all []{{.GoFriendlyName}}) {
 
 		if all != nil {
 
-			allCopy := make([]{{.GoFriendlyName}}, len(all))
-			copy(allCopy, all)
-
+			// empty the slice and release its memory to GC
+			if c.all != nil { c.all = nil }
+			
 			c.allMutex.Lock()
-			c.all = allCopy
+			c.all = append(c.all, all...)
 			c.allMutex.Unlock()
 		}
 
