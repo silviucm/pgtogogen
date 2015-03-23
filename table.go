@@ -152,8 +152,13 @@ func (tbl *Table) CollectPrimaryKeys() error {
 	pkColumnsString := ""
 	for rows.Next() {
 		err := rows.Scan(&currentConstraintName, &currentColumnName, &ordinalPosition)
-		if err != nil {
+
+		if err != nil && strings.Contains(err.Error(), "Cannot decode null into string") == false {
 			log.Fatal("CollectPrimaryKeys() fatal error inside rows.Next() iteration: ", err)
+		}
+
+		if err != nil && strings.Contains(err.Error(), "Cannot decode null into string") {
+			continue
 		}
 
 		if tbl.Columns == nil {
@@ -184,7 +189,7 @@ func (tbl *Table) CollectPrimaryKeys() error {
 	tbl.PKColumnsString = pkColumnsString
 
 	err = rows.Err()
-	if err != nil {
+	if err != nil && strings.Contains(err.Error(), "Cannot decode null into string") == false {
 		log.Fatal(err)
 	}
 

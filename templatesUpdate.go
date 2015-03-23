@@ -277,7 +277,7 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 }
 `
 
-const TABLE_INSTANCE_UPDATE_TEMPLATE = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
+const TABLE_INSTANCE_UPDATE_TEMPLATE = `{{if lt 0 (len .PKColumns)}}{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := "Update"}}{{$sourceStructName := print "source" .GoFriendlyName}}
 // Updates the row inside the {{.DbName}} table, corresponding to the PK of the current {{.GoFriendlyName}} instance.
 // All the fields in the supplied source {{.GoFriendlyName}} pointer will be updated.
@@ -318,10 +318,10 @@ func ({{$sourceStructName}} *{{.GoFriendlyName}}) {{$functionName}}() error {
 	}
 	return nil	
 	
-}
+}{{end}}
 `
 
-const TABLE_INSTANCE_UPDATE_TEMPLATE_TX = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
+const TABLE_INSTANCE_UPDATE_TEMPLATE_TX = `{{if lt 0 (len .PKColumns)}}{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := print "UpdateSingleInstance" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
 // Updates the row inside the {{.DbName}} table, corresponding to the PK of the current {{.GoFriendlyName}} instance.
 // All the fields in the supplied source {{.GoFriendlyName}} pointer will be updated.
@@ -361,5 +361,5 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 	}
 	return nil	
 	
-}
+}{{end}}
 `
