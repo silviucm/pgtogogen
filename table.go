@@ -509,6 +509,9 @@ func (tbl *Table) GenerateSelectFunctions() {
 	tbl.generateAndAppendTemplate("tableSelectWhereTemplateTx", SELECT_TEMPLATE_WHERE_TX, "")
 	tbl.generateAndAppendTemplate("tableSelectAllTemplateTx", SELECT_TEMPLATE_ALL_TX, "")
 
+	// generate the caching functionality
+	tbl.generateAndAppendTemplate("tableCachingTemplate", TABLE_TEMPLATE_CACHE, "")
+
 	fmt.Println("Table select functions generated.")
 
 }

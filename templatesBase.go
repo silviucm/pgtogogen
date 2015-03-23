@@ -24,6 +24,13 @@ type Transaction struct {
 	Tx *pgx.Tx
 }
 
+// Interface to allow cache provider other than the default, in-memory cache
+type ICacheProvider interface {
+	Get(key string) (interface{}, error)
+	Set(key string, value interface{})
+	Exists(key string) bool
+}
+
 // If this flag is set to true, the system will panic if the database
 // connection cannot be made. Otherwise, GetDb() will simply return nil.
 const FLAG_PANIC_ON_INIT_DB_FAIL bool = true

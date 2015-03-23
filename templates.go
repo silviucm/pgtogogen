@@ -24,6 +24,7 @@ const TABLE_TEMPLATE = `package {{.Options.PackageName}}
 import (
 	"bytes"
 	"net/http"
+	"sync"
 	{{range $key, $value := .GoTypesToImport}}"{{$value}}"
 	{{end}}	
 )
@@ -173,6 +174,129 @@ func (t *{{.GoFriendlyName}}) Validate() (bool, []error) {
 	return true, nil
 
 }	
+
+`
+
+const TABLE_TEMPLATE_CACHE = `
+
+/* ************************************************************ */
+/* BEGIN: Caching Functionality for {{.GoFriendlyName}}         */
+/* ************************************************************ */
+
+type CacheFor{{.GoFriendlyName}} struct {
+	sliceCache      map[string][]{{.GoFriendlyName}}
+	sliceCacheMutex sync.RWMutex
+
+	whereCache      map[string][]{{.GoFriendlyName}}
+	whereCacheMutex sync.RWMutex
+
+	singleRowCache      map[string]{{.GoFriendlyName}}
+	singleRowCacheMutex sync.RWMutex
+
+	all      []{{.GoFriendlyName}}
+	allMutex sync.RWMutex
+
+	CacheProvider ICacheProvider
+}
+
+func (c *CacheFor{{.GoFriendlyName}}) GetAll() ([]{{.GoFriendlyName}}, error) {
+
+	// if cache provider is nil use memory cache via the built-in
+	// map and mutex combo
+	if c.CacheProvider == nil {
+
+		c.allMutex.RLock()
+		all := c.all
+		c.allMutex.RUnlock()
+
+		return all, nil
+	}
+
+	// todo: implement CacheProvider functionality
+	return nil, nil
+
+}
+
+func (c *CacheFor{{.GoFriendlyName}}) GetSlice(key string) ([]{{.GoFriendlyName}}, error) {
+
+	// if cache provider is nil use memory cache via the built-in
+	// map and mutex combo
+	if c.CacheProvider == nil {
+
+		c.sliceCacheMutex.RLock()
+		s{{.GoFriendlyName}} := c.sliceCache[key]
+		c.sliceCacheMutex.RUnlock()
+
+		return s{{.GoFriendlyName}}, nil
+	}
+
+	// todo: implement CacheProvider functionality
+	return nil, nil
+
+}
+
+func (c *CacheFor{{.GoFriendlyName}}) SetSlice(key string, slice{{.GoFriendlyName}} []{{.GoFriendlyName}}) {
+
+	// if cache provider is nil use memory cache via the built-in
+	// map and mutex combo
+	if c.CacheProvider == nil {
+
+		if slice{{.GoFriendlyName}} != nil {
+
+			sliceCopy := make([]{{.GoFriendlyName}}, len(slice{{.GoFriendlyName}}))
+			copy(sliceCopy, slice{{.GoFriendlyName}})
+
+			c.sliceCacheMutex.Lock()
+			c.sliceCache[key] = sliceCopy
+			c.sliceCacheMutex.Unlock()
+		}
+
+	}
+
+	// todo: implement CacheProvider functionality
+
+}
+
+func (c *CacheFor{{.GoFriendlyName}}) Get(key string) (*{{.GoFriendlyName}}, error) {
+
+	// if cache provider is nil use memory cache via the built-in
+	// map and mutex combo
+	if c.CacheProvider == nil {
+
+		c.singleRowCacheMutex.RLock()
+		singleCachedObject, exists := c.singleRowCache[key]
+		c.singleRowCacheMutex.RUnlock()
+
+		if exists {
+			return &singleCachedObject, nil
+		}
+
+		return nil, nil
+	}
+
+	// todo: implement CacheProvider functionality
+	return nil, nil
+}
+
+func (c *CacheFor{{.GoFriendlyName}}) Set(key string, struct{{.GoFriendlyName}} {{.GoFriendlyName}}) {
+
+	// if cache provider is nil use memory cache via the built-in
+	// map and mutex combo
+	if c.CacheProvider == nil {
+
+		c.singleRowCacheMutex.Lock()
+		c.singleRowCache[key] = struct{{.GoFriendlyName}}
+		c.singleRowCacheMutex.Unlock()
+
+	}
+
+	// todo: implement CacheProvider functionality
+
+}
+
+/* ************************************************************ */
+/* END: Caching Functionality for {{.GoFriendlyName}}           */
+/* ************************************************************ */
 
 `
 

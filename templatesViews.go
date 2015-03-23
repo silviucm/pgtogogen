@@ -11,6 +11,7 @@ const VIEW_TEMPLATE = `package {{.Options.PackageName}}
 
 import (	
 	"bytes"
+	"sync"
 	{{range $key, $value := .GoTypesToImport}}"{{$value}}"
 	{{end}}
 )

@@ -314,6 +314,9 @@ func (v *View) GenerateSelectFunctions() {
 	v.generateAndAppendTemplate("viewSelectWhereTemplateTx", SELECT_TEMPLATE_WHERE_TX, "")
 	v.generateAndAppendTemplate("viewSelectAllTemplateTx", SELECT_TEMPLATE_ALL_TX, "")
 
+	// generate the caching functionality
+	v.generateAndAppendTemplate("viewCachingTemplate", TABLE_TEMPLATE_CACHE, "")
+
 	fmt.Println("View select functions generated.")
 
 }
