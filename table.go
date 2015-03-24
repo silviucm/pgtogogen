@@ -45,6 +45,9 @@ type Table struct {
 	// holds the parameters comma-separated
 	ParamString     string
 	ParamStringNoPK string
+
+	// this value is true for tables, false for views
+	IsTable bool
 }
 
 func (tbl *Table) CollectColumns() error {

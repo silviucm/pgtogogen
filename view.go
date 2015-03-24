@@ -40,6 +40,9 @@ type View struct {
 
 	// true if view is a materialized view, false otherwise
 	IsMaterialized bool
+
+	// this value is true for tables, false for views
+	IsTable bool
 }
 
 func (v *View) CollectColumns() error {

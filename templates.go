@@ -69,9 +69,8 @@ type t{{.GoFriendlyName}}Utils struct {
 	
 	utilMutex sync.RWMutex
 	
-	// pointer to a cache structure - make sure you instantiate them with
-	// NewCache-series of methods
-	cache *CacheFor{{.GoFriendlyName}}
+	// instance of a CacheFor{{.GoFriendlyName}} structure
+	Cache CacheFor{{.GoFriendlyName}}
 }
 
 {{$colCount := len .Columns}}{{$functionName := "New"}}
@@ -133,63 +132,6 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) *
 	return {{$structInstanceName}}
 }
 
-
-{{$colCount := len .Columns}}{{$functionName := "NewCache"}}
-// Creates a new CacheFor{{.GoFriendlyName}} instance and returns it after initializing it.
-// You should not use this directly, but use EnableCache and DisableCache methods
-func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() *CacheFor{{.GoFriendlyName}} {
-		
-	{{$structInstanceName := print "newCacheFor" .GoFriendlyName}}{{$structInstanceName}} := &CacheFor{{.GoFriendlyName}}{
-		CacheProvider: nil,
-	}		
-	
-	{{$structInstanceName}}.Init()
-	
-	return {{$structInstanceName}}
-}
-
-{{$colCount := len .Columns}}{{$functionName := "EnableCache"}}
-// If not already enabled, creates a new CacheFor{{.GoFriendlyName}} instance and 
-// makes the Cache property of the *t{{.GoFriendlyName}}Utils instance point to a reference of it
-func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() {
-		
-	if utilRef.cache != nil {
-		return
-	}
-	
-	newCache := utilRef.NewCache()
-
-	utilRef.utilMutex.Lock()
-	utilRef.cache = newCache
-	utilRef.utilMutex.Unlock()
-		
-}
-
-{{$colCount := len .Columns}}{{$functionName := "DisableCache"}}
-// If Cache is enabled, sets the associated CacheFor{{.GoFriendlyName}} pointer to nil
-func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() {
-		
-	if utilRef.cache == nil {
-		
-		utilRef.utilMutex.Lock()
-		utilRef.cache = nil
-		utilRef.utilMutex.Unlock()
-	}
-	
-}
-
-{{$colCount := len .Columns}}{{$functionName := "GetCache"}}
-// Returns a pointer to the associated CacheFor{{.GoFriendlyName}} instance, or nil if none
-func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() *CacheFor{{.GoFriendlyName}} {
-		
-	utilRef.utilMutex.RLock()
-	cache := utilRef.cache
-	utilRef.utilMutex.RUnlock()
-	
-	return cache
-	
-}
-
 {{$colCount := len .Columns}}{{$functionName := "CloneGlobalSettings"}}{{$structInstanceName := print "instance" .GoFriendlyName}}
 // Assigns the global settings for operations to the control fields of this instance
 // An example would be:
@@ -249,6 +191,9 @@ const TABLE_TEMPLATE_CACHE = `
 /* ************************************************************ */
 
 type CacheFor{{.GoFriendlyName}} struct {
+		
+	enabled bool // flag to determine if caching is enabled for {{.GoFriendlyName}}
+	
 	sliceCache      map[string][]{{.GoFriendlyName}}
 	sliceCacheMutex sync.RWMutex
 
@@ -266,43 +211,75 @@ type CacheFor{{.GoFriendlyName}} struct {
 
 func (c *CacheFor{{.GoFriendlyName}}) Init() {
 	
-	c.sliceCache = make(map[string][]{{.GoFriendlyName}})
-	c.whereCache = make(map[string][]{{.GoFriendlyName}})
-	c.singleRowCache = make(map[string]{{.GoFriendlyName}})
+	if c.sliceCache == nil { c.sliceCache = make(map[string][]{{.GoFriendlyName}}) }
+	if c.whereCache == nil { c.whereCache = make(map[string][]{{.GoFriendlyName}}) }
+	if c.singleRowCache == nil { c.singleRowCache = make(map[string]{{.GoFriendlyName}}) }
 	
 } 
 
-func (c *CacheFor{{.GoFriendlyName}}) GetAll() ([]{{.GoFriendlyName}}, error) {
+func (c *CacheFor{{.GoFriendlyName}}) Dealloc() {
+	
+	if c.sliceCache != nil { c.sliceCache = nil }
+	if c.whereCache != nil { c.whereCache = nil }
+	if c.singleRowCache != nil { c.singleRowCache = nil }
+
+	if c.all != nil { c.all = nil }
+	
+} 
+
+func (c *CacheFor{{.GoFriendlyName}}) IsEnabled() bool {	
+	return c.enabled	
+}
+
+func (c *CacheFor{{.GoFriendlyName}}) Enable() {
+	
+	c.enabled = true	
+	c.Init()	
+}
+
+func (c *CacheFor{{.GoFriendlyName}}) Disable() {
+		
+	c.enabled = false
+	c.Dealloc()
+	
+}
+
+func (c *CacheFor{{.GoFriendlyName}}) GetAll() ([]{{.GoFriendlyName}}, bool) {
+
+	if c.enabled == false { return nil, false } 
 
 	// if cache provider is nil use memory cache via the built-in
 	// map and mutex combo
 	if c.CacheProvider == nil {
 
 		c.allMutex.RLock()
-		all := c.all
-		c.allMutex.RUnlock()
-
-		return all, nil
+		allRecords := c.all	
+		c.allMutex.RUnlock()				
+		
+		return allRecords, (allRecords != nil)
 	}
 
 	// todo: implement CacheProvider functionality
-	return nil, nil
+	return nil, false
 
 }
 
 // Sets or refreshes the cache for all {{.GoFriendlyName}} records in the database
 func (c *CacheFor{{.GoFriendlyName}}) SetAll(all []{{.GoFriendlyName}}) {
 
+	if c.enabled == false { return 	} 	
+
 	// if cache provider is nil use memory cache via the built-in
 	// map and mutex combo
 	if c.CacheProvider == nil {
 
 		if all != nil {
-
+			
+			c.allMutex.Lock()
+			
 			// empty the slice and release its memory to GC
 			if c.all != nil { c.all = nil }
 			
-			c.allMutex.Lock()
 			c.all = append(c.all, all...)
 			c.allMutex.Unlock()
 		}
@@ -313,25 +290,77 @@ func (c *CacheFor{{.GoFriendlyName}}) SetAll(all []{{.GoFriendlyName}}) {
 
 }
 
-func (c *CacheFor{{.GoFriendlyName}}) GetSlice(key string) ([]{{.GoFriendlyName}}, error) {
+// Together with SetWhere, GetWhere enables caching of the Where methods, where the condition
+// represents the cache store key.
+func (c *CacheFor{{.GoFriendlyName}}) GetWhere(key string) ([]{{.GoFriendlyName}}, bool) {
+
+	if c.enabled == false { return nil, false } 
+
+	// if cache provider is nil use memory cache via the built-in
+	// map and mutex combo
+	if c.CacheProvider == nil {
+
+		c.whereCacheMutex.RLock()
+		w{{.GoFriendlyName}}, keyExists := c.whereCache[key]
+		c.whereCacheMutex.RUnlock()
+
+		return w{{.GoFriendlyName}}, keyExists
+	}
+
+	// todo: implement CacheProvider functionality
+	return nil, false
+
+}
+
+// Together with GetWhere, SetWhere enables caching of the Where methods, where the condition
+// represents the cache store key.
+func (c *CacheFor{{.GoFriendlyName}}) SetWhere(key string, slice{{.GoFriendlyName}} []{{.GoFriendlyName}}) {
+
+	if c.enabled == false { return 	} 	
+
+	// if cache provider is nil use memory cache via the built-in
+	// map and mutex combo
+	if c.CacheProvider == nil {
+
+		if slice{{.GoFriendlyName}} != nil {
+
+			whereSliceCopy := make([]{{.GoFriendlyName}}, len(slice{{.GoFriendlyName}}))
+			copy(whereSliceCopy, slice{{.GoFriendlyName}})
+
+			c.whereCacheMutex.Lock()
+			c.whereCache[key] = whereSliceCopy
+			c.whereCacheMutex.Unlock()
+		}
+
+	}
+
+	// todo: implement CacheProvider functionality
+
+}
+
+func (c *CacheFor{{.GoFriendlyName}}) GetSlice(key string) ([]{{.GoFriendlyName}}, bool) {
+
+	if c.enabled == false { return nil, false } 
 
 	// if cache provider is nil use memory cache via the built-in
 	// map and mutex combo
 	if c.CacheProvider == nil {
 
 		c.sliceCacheMutex.RLock()
-		s{{.GoFriendlyName}} := c.sliceCache[key]
+		s{{.GoFriendlyName}}, keyExists := c.sliceCache[key]
 		c.sliceCacheMutex.RUnlock()
 
-		return s{{.GoFriendlyName}}, nil
+		return s{{.GoFriendlyName}}, keyExists
 	}
 
 	// todo: implement CacheProvider functionality
-	return nil, nil
+	return nil, false
 
 }
 
 func (c *CacheFor{{.GoFriendlyName}}) SetSlice(key string, slice{{.GoFriendlyName}} []{{.GoFriendlyName}}) {
+
+	if c.enabled == false { return 	} 	
 
 	// if cache provider is nil use memory cache via the built-in
 	// map and mutex combo
@@ -353,7 +382,9 @@ func (c *CacheFor{{.GoFriendlyName}}) SetSlice(key string, slice{{.GoFriendlyNam
 
 }
 
-func (c *CacheFor{{.GoFriendlyName}}) Get(key string) (*{{.GoFriendlyName}}, error) {
+func (c *CacheFor{{.GoFriendlyName}}) Get(key string) (*{{.GoFriendlyName}}, bool) {
+
+	if c.enabled == false { return nil, false } 
 
 	// if cache provider is nil use memory cache via the built-in
 	// map and mutex combo
@@ -364,17 +395,19 @@ func (c *CacheFor{{.GoFriendlyName}}) Get(key string) (*{{.GoFriendlyName}}, err
 		c.singleRowCacheMutex.RUnlock()
 
 		if exists {
-			return &singleCachedObject, nil
+			return &singleCachedObject, true
 		}
 
-		return nil, nil
+		return nil, false
 	}
 
 	// todo: implement CacheProvider functionality
-	return nil, nil
+	return nil, false
 }
 
 func (c *CacheFor{{.GoFriendlyName}}) Set(key string, struct{{.GoFriendlyName}} {{.GoFriendlyName}}) {
+
+	if c.enabled == false { return 	} 	
 
 	// if cache provider is nil use memory cache via the built-in
 	// map and mutex combo

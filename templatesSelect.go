@@ -142,6 +142,11 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() ([]{{.GoFriendlyNa
 		return nil, NewModelsErrorLocal(errorPrefix, "the database handle is nil")
 	}
 
+	// try to get the rows from cache, if enabled and valid
+	if all{{.GoFriendlyName}}RowsFromCache, cacheValid := utilRef.Cache.GetAll() ; cacheValid == true {		
+		return all{{.GoFriendlyName}}RowsFromCache, nil
+	}
+
 	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
 	rows, err := currentDbHandle.Query("{{.GenericSelectQuery}}")
 
@@ -185,6 +190,10 @@ func (txWrapper *Transaction) {{$functionName}}() ([]{{.GoFriendlyName}},  error
 	if txWrapper == nil { return nil, NewModelsErrorLocal(errorPrefix, "the transaction wrapper is nil") }
 	if txWrapper.Tx == nil { return nil, NewModelsErrorLocal(errorPrefix, "the transaction object is nil") }	
 
+	// try to get the rows from cache, if enabled and valid
+	if all{{.GoFriendlyName}}RowsFromCache, cacheValid := {{if .IsTable}}Tables{{else}}Views{{end}}.{{.GoFriendlyName}}.Cache.GetAll() ; cacheValid == true {		
+		return all{{.GoFriendlyName}}RowsFromCache, nil
+	}
 
 	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
 	rows, err := txWrapper.Tx.Query("{{.GenericSelectQuery}}")

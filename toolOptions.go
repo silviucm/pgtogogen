@@ -314,6 +314,7 @@ func (t *ToolOptions) CollectTables() error {
 			ColumnsString:   "",
 			PKColumnsString: "",
 			FKColumnsString: "",
+			IsTable:         true,
 		}
 
 		currentTable.GoTypesToImport = make(map[string]string)
@@ -379,6 +380,7 @@ func (t *ToolOptions) CollectViews() error {
 
 			ColumnsString:  "",
 			IsMaterialized: false,
+			IsTable:        false,
 		}
 
 		currentView.GoTypesToImport = make(map[string]string)

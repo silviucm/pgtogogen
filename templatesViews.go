@@ -26,6 +26,9 @@ type {{.GoFriendlyName}} struct {
 // fake, interal type to allow a singleton structure that would hold static-like methods
 type t{{.GoFriendlyName}}Utils struct {
 		
+	// instance of a CacheFor{{.GoFriendlyName}} structure
+	Cache CacheFor{{.GoFriendlyName}}		
+		
 }
 
 {{if .IsMaterialized}}
