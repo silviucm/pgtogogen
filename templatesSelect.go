@@ -143,7 +143,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() ([]{{.GoFriendlyNa
 	}
 
 	// try to get the rows from cache, if enabled and valid
-	if all{{.GoFriendlyName}}RowsFromCache, cacheValid := utilRef.Cache.GetAll() ; cacheValid == true {		
+	if all{{.GoFriendlyName}}RowsFromCache, cacheValid := utilRef.Cache.GetAllRows() ; cacheValid == true {		
 		return all{{.GoFriendlyName}}RowsFromCache, nil
 	}
 
@@ -191,7 +191,7 @@ func (txWrapper *Transaction) {{$functionName}}() ([]{{.GoFriendlyName}},  error
 	if txWrapper.Tx == nil { return nil, NewModelsErrorLocal(errorPrefix, "the transaction object is nil") }	
 
 	// try to get the rows from cache, if enabled and valid
-	if all{{.GoFriendlyName}}RowsFromCache, cacheValid := {{if .IsTable}}Tables{{else}}Views{{end}}.{{.GoFriendlyName}}.Cache.GetAll() ; cacheValid == true {		
+	if all{{.GoFriendlyName}}RowsFromCache, cacheValid := {{if .IsTable}}Tables{{else}}Views{{end}}.{{.GoFriendlyName}}.Cache.GetAllRows() ; cacheValid == true {		
 		return all{{.GoFriendlyName}}RowsFromCache, nil
 	}
 

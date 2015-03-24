@@ -244,7 +244,7 @@ func (c *CacheFor{{.GoFriendlyName}}) Disable() {
 	
 }
 
-func (c *CacheFor{{.GoFriendlyName}}) GetAll() ([]{{.GoFriendlyName}}, bool) {
+func (c *CacheFor{{.GoFriendlyName}}) GetAllRows() ([]{{.GoFriendlyName}}, bool) {
 
 	if c.enabled == false { return nil, false } 
 
@@ -265,7 +265,7 @@ func (c *CacheFor{{.GoFriendlyName}}) GetAll() ([]{{.GoFriendlyName}}, bool) {
 }
 
 // Sets or refreshes the cache for all {{.GoFriendlyName}} records in the database
-func (c *CacheFor{{.GoFriendlyName}}) SetAll(all []{{.GoFriendlyName}}) {
+func (c *CacheFor{{.GoFriendlyName}}) SetAllRows(all []{{.GoFriendlyName}}) {
 
 	if c.enabled == false { return 	} 	
 
@@ -283,6 +283,28 @@ func (c *CacheFor{{.GoFriendlyName}}) SetAll(all []{{.GoFriendlyName}}) {
 			c.all = append(c.all, all...)
 			c.allMutex.Unlock()
 		}
+
+	}
+
+	// todo: implement CacheProvider functionality
+
+}
+
+// Deletes the dedicated cache store for all {{.GoFriendlyName}} records in the database
+func (c *CacheFor{{.GoFriendlyName}}) DeleteAllRows() {
+
+	if c.enabled == false { return 	} 	
+
+	// if cache provider is nil use memory cache via the built-in
+	// map and mutex combo
+	if c.CacheProvider == nil {
+
+		c.allMutex.Lock()
+		
+		// empty the slice and release its memory to GC
+		if c.all != nil { c.all = nil }
+					
+		c.allMutex.Unlock()	
 
 	}
 
@@ -335,6 +357,25 @@ func (c *CacheFor{{.GoFriendlyName}}) SetWhere(key string, slice{{.GoFriendlyNam
 	}
 
 	// todo: implement CacheProvider functionality
+}
+
+func (c *CacheFor{{.GoFriendlyName}}) DeleteWhere(key string) {
+
+	if c.enabled == false { return } 
+
+	// if cache provider is nil use memory cache via the built-in
+	// map and mutex combo
+	if c.CacheProvider == nil {
+
+		c.whereCacheMutex.Lock()
+		delete(c.whereCache, key)
+		c.whereCacheMutex.Unlock()
+
+		return 
+	}
+
+	// todo: implement CacheProvider functionality
+	return 
 
 }
 
@@ -382,6 +423,26 @@ func (c *CacheFor{{.GoFriendlyName}}) SetSlice(key string, slice{{.GoFriendlyNam
 
 }
 
+func (c *CacheFor{{.GoFriendlyName}}) DeleteSlice(key string) {
+
+	if c.enabled == false { return } 
+
+	// if cache provider is nil use memory cache via the built-in
+	// map and mutex combo
+	if c.CacheProvider == nil {
+
+		c.sliceCacheMutex.Lock()
+		delete(c.sliceCache, key)
+		c.sliceCacheMutex.Unlock()
+
+		return 
+	}
+
+	// todo: implement CacheProvider functionality
+	return 
+
+}
+
 func (c *CacheFor{{.GoFriendlyName}}) Get(key string) (*{{.GoFriendlyName}}, bool) {
 
 	if c.enabled == false { return nil, false } 
@@ -420,6 +481,27 @@ func (c *CacheFor{{.GoFriendlyName}}) Set(key string, struct{{.GoFriendlyName}} 
 	}
 
 	// todo: implement CacheProvider functionality
+
+}
+
+
+func (c *CacheFor{{.GoFriendlyName}}) Delete(key string) {
+
+	if c.enabled == false { return } 
+
+	// if cache provider is nil use memory cache via the built-in
+	// map and mutex combo
+	if c.CacheProvider == nil {
+
+		c.singleRowCacheMutex.Lock()
+		delete(c.singleRowCache, key)
+		c.singleRowCacheMutex.Unlock()
+
+		return 
+	}
+
+	// todo: implement CacheProvider functionality
+	return 
 
 }
 
