@@ -73,6 +73,9 @@ type t{{.GoFriendlyName}}Utils struct {
 	Cache CacheFor{{.GoFriendlyName}}
 }
 
+{{if gt (len .UniqueConstraints) 0}}{{range .UniqueConstraints}}var Err{{$tableGoName}}_UQ_{{.DbName}} = NewModelsErrorLocal("Unique constraint violation:","{{.DbName}}")
+{{end}}{{end}}
+
 {{$colCount := len .Columns}}{{$functionName := "New"}}
 // Creates a new pointer to a blank KiriUser structure.
 // Some of the fields, such as the time.Time ones, might be already set to time.Now()

@@ -27,6 +27,8 @@ type Table struct {
 	FKColumns       []Column
 	FKColumnsString string
 
+	UniqueConstraints []Constraint
+
 	DbName         string
 	GoFriendlyName string
 	DbComments     string
@@ -278,6 +280,86 @@ func (tbl *Table) CollectForeignKeys() error {
 	}
 
 	return nil
+}
+
+func (tbl *Table) CollectUniqueConstraints() error {
+
+	var currentConstraintName, currentConstraintSchema, currentTableName, currentColumnName, currentConstraintType string
+
+	var constraintsQuery = `SELECT  
+        tc.constraint_name,         
+        tc.constraint_schema,
+        tc.table_name, 
+        kcu.column_name,
+        tc.constraint_type
+    FROM 
+        information_schema.table_constraints AS tc  
+        JOIN information_schema.key_column_usage AS kcu ON (tc.constraint_name = kcu.constraint_name and tc.table_name = kcu.table_name)     
+    WHERE tc.constraint_schema = $1 AND tc.table_name = $2 AND tc.constraint_type = 'UNIQUE'   
+	`
+
+	rows, err := tbl.ConnectionPool.Query(constraintsQuery, tbl.Options.DbSchema, tbl.DbName)
+
+	if err != nil {
+		log.Fatal("CollectUniqueConstraints() fatal error running the query:", err)
+	}
+	defer rows.Close()
+
+	var numberOfUQs int = 0
+
+	constraintsMap := make(map[string]Constraint)
+	for rows.Next() {
+		err := rows.Scan(&currentConstraintName, &currentConstraintSchema, &currentTableName, &currentColumnName, &currentConstraintType)
+		if err != nil {
+			log.Fatal("CollectUniqueConstraints() fatal error inside rows.Next() iteration: ", err)
+		}
+
+		if tbl.Columns == nil {
+			log.Fatal("CollectUniqueConstraints() FATAL: nil Columns slice in this Table struct instance. Make sure you call CollectColumns() before this method.")
+		}
+
+		// create the constraint object and put it into the temp map if not already there
+		var newOrExistingConstraint Constraint
+		newOrExistingConstraint, alreadyThere := constraintsMap[currentConstraintName]
+
+		if alreadyThere == false {
+			newOrExistingConstraint = Constraint{}
+			newOrExistingConstraint.ConnectionPool = tbl.ConnectionPool
+			newOrExistingConstraint.Options = tbl.Options
+			newOrExistingConstraint.ParentTable = tbl
+
+			newOrExistingConstraint.DbName = currentConstraintName
+			newOrExistingConstraint.IsUnique = true
+			newOrExistingConstraint.Type = currentConstraintType
+
+			numberOfUQs = numberOfUQs + 1
+		}
+
+		for i := range tbl.Columns {
+			if tbl.Columns[i].DbName == currentColumnName {
+				// add the column to the Columns slice of the constraint
+				newOrExistingConstraint.Columns = append(newOrExistingConstraint.Columns, tbl.Columns[i])
+			}
+		}
+
+		constraintsMap[currentConstraintName] = newOrExistingConstraint
+
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if numberOfUQs > 0 {
+		for _, constraint := range constraintsMap {
+			tbl.UniqueConstraints = append(tbl.UniqueConstraints, constraint)
+		}
+	}
+
+	//log.Println("Number of unique constraints collected for ", tbl.DbName, ": ", len(tbl.UniqueConstraints))
+	return nil
+
 }
 
 func (tbl *Table) CollectComments() error {

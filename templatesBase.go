@@ -14,6 +14,7 @@ import (
 	"errors"
 	"log"
 	"strconv"
+	"strings"
 	"time"
  	"github.com/twinj/uuid"
 )
@@ -275,6 +276,10 @@ func NewGuid() string {
 // Wrapper over strconv package Itoa method
 func Itoa(intValue int) string {
 	return strconv.Itoa(intValue)
+}
+
+func Contains(source string, subStr string) bool {
+	return strings.Contains(source, subStr)
 }
 
 // Sort comparator for string type

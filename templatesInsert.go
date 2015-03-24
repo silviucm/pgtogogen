@@ -66,6 +66,10 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
             // no such row found, return nil and nil
 			return nil, nil
     case err != nil:
+			{{if gt (len .UniqueConstraints) 0}}if Contains(err.Error(),"SQLSTATE 23505") {
+			{{range $e := .UniqueConstraints}}	if Contains(err.Error(),"{{$e.DbName}}") { return nil,Err{{$e.ParentTable.GoFriendlyName}}_UQ_{{$e.DbName}}	}				
+			{{end}}
+			} {{end}}
             return nil, NewModelsError(errorPrefix + "fatal error running the query:",err)
     default:
            	// populate the returning ids inside the returnStructure pointer
@@ -149,6 +153,10 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
             // no such row found, return nil and nil
 			return nil, nil
     case err != nil:
+			{{if gt (len .UniqueConstraints) 0}}if Contains(err.Error(),"SQLSTATE 23505") {
+			{{range $e := .UniqueConstraints}}	if Contains(err.Error(),"{{$e.DbName}}") { return nil,Err{{$e.ParentTable.GoFriendlyName}}_UQ_{{$e.DbName}}	}				
+			{{end}}
+			} {{end}}	
             return nil, NewModelsError(errorPrefix + "fatal error running the query:",err)
     default:
            	// populate the returning ids inside the returnStructure pointer

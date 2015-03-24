@@ -42,6 +42,12 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 	
 	r, err := currentDbHandle.Exec(queryBuffer.String(), allParams...)
 	if err != nil {
+		
+		{{if gt (len .UniqueConstraints) 0}}if Contains(err.Error(),"SQLSTATE 23505") {
+		{{range $e := .UniqueConstraints}}	if Contains(err.Error(),"{{$e.DbName}}") { return 0,Err{{$e.ParentTable.GoFriendlyName}}_UQ_{{$e.DbName}}	}				
+		{{end}}
+		} {{end}}		
+		
 		return 0, NewModelsError(errorPrefix + "db.Exec error:",err)
 	}
 	
@@ -89,6 +95,12 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 	
 	r, err := txWrapper.Tx.Exec(queryBuffer.String(), allParams...)
 	if err != nil {
+		
+		{{if gt (len .UniqueConstraints) 0}}if Contains(err.Error(),"SQLSTATE 23505") {
+		{{range $e := .UniqueConstraints}}	if Contains(err.Error(),"{{$e.DbName}}") { return 0,Err{{$e.ParentTable.GoFriendlyName}}_UQ_{{$e.DbName}}	}				
+		{{end}}
+		} {{end}}		
+		
 		return 0, NewModelsError(errorPrefix + "db.Exec error:",err)
 	}
 	
@@ -179,6 +191,12 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 	
 	r, err := currentDbHandle.Exec(queryBuffer.String(), allParams...)
 	if err != nil {
+		
+		{{if gt (len .UniqueConstraints) 0}}if Contains(err.Error(),"SQLSTATE 23505") {
+		{{range $e := .UniqueConstraints}}	if Contains(err.Error(),"{{$e.DbName}}") { return 0,Err{{$e.ParentTable.GoFriendlyName}}_UQ_{{$e.DbName}}	}				
+		{{end}}
+		} {{end}}		
+		
 		return 0, NewModelsError(errorPrefix + "db.Exec error:",err)
 	}
 	
@@ -268,6 +286,12 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 	
 	r, err := txWrapper.Tx.Exec(queryBuffer.String(), allParams...)
 	if err != nil {
+		
+		{{if gt (len .UniqueConstraints) 0}}if Contains(err.Error(),"SQLSTATE 23505") {
+		{{range $e := .UniqueConstraints}}	if Contains(err.Error(),"{{$e.DbName}}") { return 0,Err{{$e.ParentTable.GoFriendlyName}}_UQ_{{$e.DbName}}	}				
+		{{end}}
+		} {{end}}		
+		
 		return 0, NewModelsError(errorPrefix + "db.Exec error:",err)
 	}
 	
@@ -309,6 +333,12 @@ func ({{$sourceStructName}} *{{.GoFriendlyName}}) {{$functionName}}() error {
 	
 	r, err := currentDbHandle.Exec(queryBuffer.String(), instanceValuesSlice...)
 	if err != nil {
+		
+		{{if gt (len .UniqueConstraints) 0}}if Contains(err.Error(),"SQLSTATE 23505") {
+		{{range $e := .UniqueConstraints}}	if Contains(err.Error(),"{{$e.DbName}}") { return Err{{$e.ParentTable.GoFriendlyName}}_UQ_{{$e.DbName}}	}				
+		{{end}}
+		} {{end}}		
+		
 		return NewModelsError(errorPrefix + "db.Exec error:",err)
 	}
 	
@@ -352,6 +382,12 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 	
 	r, err := txWrapper.Tx.Exec(queryBuffer.String(), instanceValuesSlice...)
 	if err != nil {
+		
+		{{if gt (len .UniqueConstraints) 0}}if Contains(err.Error(),"SQLSTATE 23505") {
+		{{range $e := .UniqueConstraints}}	if Contains(err.Error(),"{{$e.DbName}}") { return Err{{$e.ParentTable.GoFriendlyName}}_UQ_{{$e.DbName}}	}				
+		{{end}}
+		} {{end}}		
+		
 		return NewModelsError(errorPrefix + "db.Exec error:",err)
 	}
 	

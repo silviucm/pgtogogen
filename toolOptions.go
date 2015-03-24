@@ -330,6 +330,11 @@ func (t *ToolOptions) CollectTables() error {
 			log.Fatal("CollectTables(): CollectPrimaryKeys method for table ", currentTable.DbName, " FATAL error: ", err)
 		}
 
+		// collect the unique constraints for the table
+		if err := currentTable.CollectUniqueConstraints(); err != nil {
+			log.Fatal("CollectTables(): CollectUniqueConstraints method for table ", currentTable.DbName, " FATAL error: ", err)
+		}
+
 		// generate the typical select sql queries
 		currentTable.CreateGenericQueries()
 
