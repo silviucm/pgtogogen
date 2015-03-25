@@ -11,12 +11,14 @@ const BASE_TEMPLATE = `package {{.PackageName}}
 
 import (
 	"github.com/silviucm/pgx"	
+	"bytes"
 	"errors"
 	"log"
 	"strconv"
 	"strings"
 	"time"
  	"github.com/twinj/uuid"
+	"reflect"
 )
 
 // Wrapper structure over the pgx transaction package, so we don't need to import
@@ -31,6 +33,22 @@ type ICacheProvider interface {
 	Set(key string, value interface{})
 	Exists(key string) bool
 }
+
+// Caching flags to allow functions and methods be supplied with caching behaviour options
+const (
+	// do not use caching
+	FLAG_CACHE_DISABLE int = 0
+	
+	// if the cache is already there, use it, otherwise populate it from database
+	FLAG_CACHE_USE int = 1
+	
+	// forces the reload of the cache from the database
+	FLAG_CACHE_RELOAD int = 2
+	
+	// delete the cache entry and do not use it
+	FLAG_CACHE_DELETE int = 4
+)
+
 
 // If this flag is set to true, the system will panic if the database
 // connection cannot be made. Otherwise, GetDb() will simply return nil.
@@ -261,6 +279,51 @@ func GetGoTypeForColumn(columnType string) (typeReturn string, goTypeToImport st
 	}
 
 	return typeReturn, goTypeToImport
+}
+
+// Returns the string composed of the condition parameter and the stringified
+// param variadic list interface{} members
+func GetHashFromConditionAndParams(condition string, params ...interface{}) (string, error) {
+	
+	var errorPrefix = "GetHashFromConditionAndParams() ERROR: "
+	
+	// define the delete query
+	hashBuffer := bytes.Buffer{}
+	_, writeErr := hashBuffer.WriteString(condition)
+	if writeErr != nil {
+		return "", NewModelsError(errorPrefix + "hashBuffer.WriteString error (condition parameter):",writeErr)
+	}
+
+	for _,currentParam := range params {
+		
+		switch currentParam.(type) {
+		case int:
+			_, writeErr = hashBuffer.WriteString(Itoa(currentParam.(int)))
+			if writeErr != nil {
+				return "", NewModelsError(errorPrefix + "queryBuffer.WriteString error:",writeErr)
+			}
+		case float64:
+			_, writeErr = hashBuffer.WriteString(strconv.FormatFloat(currentParam.(float64), 'f', 6, 64))
+			if writeErr != nil {
+				return "", NewModelsError(errorPrefix + "queryBuffer.WriteString error:",writeErr)
+			}
+		case string:
+			_, writeErr = hashBuffer.WriteString(currentParam.(string))
+			if writeErr != nil {
+				return "", NewModelsError(errorPrefix + "queryBuffer.WriteString error:",writeErr)
+			}
+		case time.Time:
+			_, writeErr = hashBuffer.WriteString((currentParam.(time.Time)).Format(time.RFC3339))
+			if writeErr != nil {
+				return "", NewModelsError(errorPrefix + "queryBuffer.WriteString error:",writeErr)
+			}				    
+		default:
+			return "", NewModelsErrorLocal(errorPrefix, "undetermined interface type: " + reflect.TypeOf(currentParam).String())			
+		}						
+	}
+
+	return hashBuffer.String(), nil
+	
 }
 
 // Wrapper over time package Now method

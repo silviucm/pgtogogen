@@ -5,17 +5,36 @@ package main
 /* Templates for the Where method */
 
 const SELECT_TEMPLATE_WHERE = `{{$colCount := len .Columns}}
-{{$functionName := "Where"}}{{$sourceStructName := print "source" .GoFriendlyName}}
+{{$functionName := "SelectFrom"}}{{$sourceStructName := print "source" .GoFriendlyName}}
 // Returns the rows from {{.DbName}}, corresponding to the supplied condition 
 // and the respective parameters. The condition must not include the WHERE keyword.
+// The cacheOption parameter is one of the FLAG_CACHE_[behaviour] global integer constants.
+// FLAG_CACHE_DISABLE has a value of 0, and caching is completely bypassed.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.
-func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(cacheOption int, condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
 
 	if condition == "" {
 		return nil, NewModelsErrorLocal(errorPrefix, "No condition specified. Please use SelectAll method to select all rows from {{.DbName}}")
+	}
+	
+	var whereClauseHash string = ""
+	var hashErr error = nil	
+
+	if cacheOption > FLAG_CACHE_DISABLE {
+		// check the caching options - in case it's FLAG_CACHE_USE and there is cache available no need to go further
+		if cacheOption == FLAG_CACHE_USE {
+			whereClauseHash, hashErr = GetHashFromConditionAndParams(condition, params...)
+			if hashErr != nil {
+				return nil, NewModelsError(errorPrefix + "GetHashFromConditionAndParams() error:",hashErr)
+			}
+			// try to get the rows from cache, if enabled and valid
+			if current{{.GoFriendlyName}}RowsFromCache, cacheValid := utilRef.Cache.GetWhere(whereClauseHash) ; cacheValid == true {					
+				return current{{.GoFriendlyName}}RowsFromCache, nil
+			} 
+		}
 	}
 	
 	currentDbHandle := GetDb()
@@ -62,22 +81,49 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(condition string, pa
 		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
 	}	
 	
+	// before returning the result, make sure to insert it into cache if instructed
+	if cacheOption > FLAG_CACHE_DISABLE {
+		
+		if cacheOption != FLAG_CACHE_DELETE {			
+			utilRef.Cache.SetWhere(whereClauseHash, sliceOf{{.GoFriendlyName}})	
+		}
+	}	
+	
 	return sliceOf{{.GoFriendlyName}}, nil
 }
 `
 
 const SELECT_TEMPLATE_WHERE_TX = `{{$colCount := len .Columns}}
-{{$functionName := print "Where" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
+{{$functionName := print "SelectFrom" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
 // Returns the rows from {{.DbName}}, corresponding to the supplied condition 
 // and the respective parameters. The condition must not include the WHERE keyword.
+// The cacheOption parameter is one of the FLAG_CACHE_[behaviour] global integer constants.
+// FLAG_CACHE_DISABLE has a value of 0, and caching is completely bypassed.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.
-func (txWrapper *Transaction) {{$functionName}}(condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
+func (txWrapper *Transaction) {{$functionName}}(cacheOption int, condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
 
 	if condition == "" {
 		return nil, NewModelsErrorLocal(errorPrefix, "No condition specified. Please use SelectAll method to select all rows from {{.DbName}}")
+	}
+
+	var whereClauseHash string = ""
+	var hashErr error = nil	
+
+	if cacheOption > FLAG_CACHE_DISABLE {
+		// check the caching options - in case it's FLAG_CACHE_USE and there is cache available no need to go further
+		if cacheOption == FLAG_CACHE_USE {
+			whereClauseHash, hashErr = GetHashFromConditionAndParams(condition, params...)
+			if hashErr != nil {
+				return nil, NewModelsError(errorPrefix + "GetHashFromConditionAndParams() error:",hashErr)
+			}
+			// try to get the rows from cache, if enabled and valid
+			if current{{.GoFriendlyName}}RowsFromCache, cacheValid := {{if .IsTable}}Tables{{else}}Views{{end}}.{{.GoFriendlyName}}.Cache.GetWhere(whereClauseHash) ; cacheValid == true {					
+				return current{{.GoFriendlyName}}RowsFromCache, nil
+			} 
+		}
 	}
 	
 	if txWrapper == nil { return nil, NewModelsErrorLocal(errorPrefix, "the transaction wrapper is nil") }
@@ -120,7 +166,15 @@ func (txWrapper *Transaction) {{$functionName}}(condition string, params ...inte
 	err = rows.Err()
 	if err != nil {
 		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
-	}	
+	}
+
+	// before returning the result, make sure to insert it into cache if instructed
+	if cacheOption > FLAG_CACHE_DISABLE {
+		
+		if cacheOption != FLAG_CACHE_DELETE {			
+			{{if .IsTable}}Tables{{else}}Views{{end}}.{{.GoFriendlyName}}.Cache.SetWhere(whereClauseHash, sliceOf{{.GoFriendlyName}})	
+		}
+	}		
 	
 	return sliceOf{{.GoFriendlyName}}, nil
 }

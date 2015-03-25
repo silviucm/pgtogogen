@@ -589,6 +589,7 @@ func (tbl *Table) GenerateTableStruct() {
 func (tbl *Table) GenerateSelectFunctions() {
 
 	tbl.generateAndAppendTemplate("tableSelectWhereTemplate", SELECT_TEMPLATE_WHERE, "")
+
 	tbl.generateAndAppendTemplate("tableSelectAllTemplate", SELECT_TEMPLATE_ALL, "")
 
 	tbl.generateAndAppendTemplate("tableSelectWhereTemplateTx", SELECT_TEMPLATE_WHERE_TX, "")
