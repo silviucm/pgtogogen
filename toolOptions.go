@@ -246,7 +246,7 @@ func (t *ToolOptions) WriteBaseFiles() {
 
 func (t *ToolOptions) writeBaseTemplateFile(templateName, templateContent string, baseFilename string, overwritable bool) {
 
-	tmpl, err := template.New(templateName).Parse(templateContent)
+	tmpl, err := template.New(templateName).Funcs(fns).Parse(templateContent)
 	if err != nil {
 		log.Fatal("writeBaseTemplateFileFile() fatal error running template.New:", err)
 	}
@@ -339,9 +339,11 @@ func (t *ToolOptions) CollectTables() error {
 		currentTable.CreateGenericQueries()
 
 		// collect the comments for the table and the columns
+		/* BUGS if constraint comments are inserted - to find how to tie comments to fields specifically
 		if err = currentTable.CollectComments(); err != nil {
 			log.Fatal("CollectTables(): CollectComments method for table ", currentTable.DbName, " FATAL error: ", err)
 		}
+		*/
 
 		// add the table to the slice
 		t.Tables = append(t.Tables, *currentTable)

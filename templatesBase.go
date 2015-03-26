@@ -372,6 +372,11 @@ var LessComparatorFor_time *tLessComparatorFor_time
 func (t *tLessComparatorFor_time) Time(first, second time.Time) bool {  return first.Before(second) }
 
 /* BEGIN conversion methods */
+
+func BoolToNilInterface(boolVal bool) interface{} {
+	return nil
+}
+
 const (
 	// See http://golang.org/pkg/time/#Parse
 	comparisonTimeFormat = "2006-01-02 15:04:05 MST"
@@ -473,6 +478,14 @@ type stTables struct {
 }
 
 var Tables stTables
+
+// Iterates through all tables prefixed with "lookup" (case-insensitive)
+// and enables cache, then loads all rows inside the respective caches
+func (t *stTables) CacheLookupTables() {
+	
+	{{range .Tables}}{{if startsWith .GoFriendlyName "lookup"}} t.{{.GoFriendlyName}}.Cache.EnableAndLoadAllRows()
+	{{end}}{{end}}	
+}
 {{end}}
 
 {{if and .Views (lt 0 (len .Views))}}

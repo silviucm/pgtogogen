@@ -28,28 +28,54 @@ func GetGoFriendlyNameForColumn(columnName string) string {
 	return strings.Join(subNames, "")
 }
 
-func GetGoTypeForColumn(columnType string) (typeReturn string, goTypeToImport string) {
+func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn string, nullableTypeReturn string, goTypeToImport string) {
 
 	typeReturn = ""
 	goTypeToImport = ""
+	nullableTypeReturn = ""
 
 	switch columnType {
 	case "character varying":
 		typeReturn = "string"
+		if nullable {
+			nullableTypeReturn = "pgx.NullString"
+		}
+
 	case "integer", "serial":
 		typeReturn = "int32"
+		if nullable {
+			nullableTypeReturn = "pgx.NullInt32"
+		}
+
 	case "boolean":
 		typeReturn = "bool"
+		if nullable {
+			nullableTypeReturn = "pgx.NullBool"
+		}
+
 	case "uuid":
 		typeReturn = "string"
+		if nullable {
+			nullableTypeReturn = "pgx.NullString"
+		}
+
 	case "bigint":
 		typeReturn = "int64"
-	case "timestamp with time zone":
+		if nullable {
+			nullableTypeReturn = "pgx.NullInt64"
+		}
+
+	case "timestamp with time zone", "timestamp without time zone":
+
 		typeReturn = "time.Time"
 		goTypeToImport = "time"
+
+		if nullable {
+			nullableTypeReturn = "pgx.NullTime"
+		}
 	}
 
-	return typeReturn, goTypeToImport
+	return typeReturn, nullableTypeReturn, goTypeToImport
 }
 
 func DecodeIsColumnSequence(columnDefaultValue pgx.NullString) bool {

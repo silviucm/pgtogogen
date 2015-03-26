@@ -1,6 +1,9 @@
 package main
 
-import "text/template"
+import (
+	"strings"
+	"text/template"
+)
 
 /* Template helper functions */
 var fns = template.FuncMap{
@@ -9,6 +12,9 @@ var fns = template.FuncMap{
 	},
 	"plus": func(x int, y int) int {
 		return x + y
+	},
+	"startsWith": func(source, prefix string) bool {
+		return strings.HasPrefix(strings.ToLower(source), strings.ToLower(prefix))
 	},
 }
 
@@ -25,9 +31,13 @@ import (
 	"bytes"
 	"net/http"
 	"sync"
+	"github.com/silviucm/pgx"
 	{{range $key, $value := .GoTypesToImport}}"{{$value}}"
 	{{end}}	
 )
+
+// this is a dummy variable, just to use the pgx package
+var pgxErrDeadConn{{.GoFriendlyName}} = pgx.ErrDeadConn
 
 const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.DbName}}"
 
@@ -35,7 +45,11 @@ const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.DbName}}"
 type {{.GoFriendlyName}} struct {
 	{{range .Columns}}{{if ne .DbComments ""}}/* {{.DbComments}} */
 	{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
+	{{if .Nullable}}{{.GoName}}_IsNotNull bool // if true, it means the corresponding field does not currently carry a null value{{end}}
+
 	{{else}}{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}{{end}}
+	{{if .Nullable}}{{.GoName}}_IsNotNull bool // if true, it means the corresponding field does not currently carry a null value
+	{{end}}
 	{{end}}	
 	
 	// Set this to true if you want Inserts to ignore the PK fields	
@@ -244,6 +258,21 @@ func (c *CacheFor{{.GoFriendlyName}}) Disable() {
 		
 	c.enabled = false
 	c.Dealloc()
+	
+}
+
+// Enables caching for {{.DbName}} and loads all rows inside the cache.
+// This should only be used for small-sized lookup tables, not for tables that can 
+// grow to huge numbers of records. Since the result set is unordered, please use
+// the SortBy functionality to sort the result set when needed
+func (c *CacheFor{{.GoFriendlyName}}) EnableAndLoadAllRows() {
+	
+	c.Enable()
+	
+	allRows, err := {{if .IsTable}}Tables{{else}}Views{{end}}.{{.GoFriendlyName}}.SelectAll()
+	if err == nil && len(allRows) > 0 {
+		c.SetAllRows(allRows)
+	}
 	
 }
 

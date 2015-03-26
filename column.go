@@ -28,9 +28,10 @@ type Column struct {
 
 	IsFK bool
 
-	GoName string
-	GoType string
-	IsGuid bool
+	GoName         string
+	GoType         string
+	GoNullableType string
+	IsGuid         bool
 
 	ColumnComment string
 }

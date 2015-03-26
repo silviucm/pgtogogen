@@ -65,7 +65,8 @@ func (v *View) CollectColumns() error {
 			log.Fatal("View.CollectColumns() fatal error inside rows.Next() iteration: ", err)
 		}
 
-		resolvedGoType, goTypeToImport := GetGoTypeForColumn(dataType)
+		nullable := DecodeNullable(isNullable)
+		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(dataType, nullable)
 
 		if goTypeToImport != "" {
 			if v.GoTypesToImport == nil {
@@ -80,14 +81,15 @@ func (v *View) CollectColumns() error {
 			DbName:       currentColumnName,
 			Type:         dataType,
 			DefaultValue: columnDefault,
-			Nullable:     DecodeNullable(isNullable),
+			Nullable:     nullable,
 			MaxLength:    DecodeMaxLength(charMaxLength),
 			IsSequence:   DecodeIsColumnSequence(columnDefault),
 
 			IsCompositePK: false, IsPK: false, IsFK: false,
 
-			GoName: GetGoFriendlyNameForColumn(currentColumnName),
-			GoType: resolvedGoType,
+			GoName:         GetGoFriendlyNameForColumn(currentColumnName),
+			GoType:         resolvedGoType,
+			GoNullableType: nullableType,
 
 			ConnectionPool: v.ConnectionPool,
 			Options:        v.Options,
@@ -141,7 +143,8 @@ AND    NOT attisdropped;
 			log.Fatal("View.CollectColumns() fatal error inside rows.Next() iteration: ", err)
 		}
 
-		resolvedGoType, goTypeToImport := GetGoTypeForColumn(dataType)
+		nullable := DecodeNullable(isNullable)
+		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(dataType, nullable)
 
 		if goTypeToImport != "" {
 			if v.GoTypesToImport == nil {
@@ -156,14 +159,15 @@ AND    NOT attisdropped;
 			DbName:       currentColumnName,
 			Type:         dataType,
 			DefaultValue: columnDefault,
-			Nullable:     DecodeNullable(isNullable),
+			Nullable:     nullable,
 			MaxLength:    DecodeMaxLength(charMaxLength),
 			IsSequence:   false,
 
 			IsCompositePK: false, IsPK: false, IsFK: false,
 
-			GoName: GetGoFriendlyNameForColumn(currentColumnName),
-			GoType: resolvedGoType,
+			GoName:         GetGoFriendlyNameForColumn(currentColumnName),
+			GoType:         resolvedGoType,
+			GoNullableType: nullableType,
 
 			ConnectionPool: v.ConnectionPool,
 			Options:        v.Options,

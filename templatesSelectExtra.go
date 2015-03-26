@@ -47,7 +47,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() (int64,  error) {
 	// define the select query
 	var query string = "SELECT reltuples FROM pg_class WHERE oid = '{{.Options.DbSchema}}.{{.DbName}}'::regclass;"
 	
-	// the reltuples is real (oid 700) so we need to retrieve it inside a fload
+	// the reltuples is real (oid 700) so we need to retrieve it using a float32 value
 	var totalRows float32
 	
 	err := currentDbHandle.QueryRow(query).Scan(&totalRows)

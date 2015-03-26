@@ -72,7 +72,8 @@ func (tbl *Table) CollectColumns() error {
 			log.Fatal("CollectColumns() fatal error inside rows.Next() iteration: ", err)
 		}
 
-		resolvedGoType, goTypeToImport := GetGoTypeForColumn(dataType)
+		nullable := DecodeNullable(isNullable)
+		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(dataType, nullable)
 
 		if goTypeToImport != "" {
 			if tbl.GoTypesToImport == nil {
@@ -87,14 +88,15 @@ func (tbl *Table) CollectColumns() error {
 			DbName:       currentColumnName,
 			Type:         dataType,
 			DefaultValue: columnDefault,
-			Nullable:     DecodeNullable(isNullable),
+			Nullable:     nullable,
 			MaxLength:    DecodeMaxLength(charMaxLength),
 			IsSequence:   DecodeIsColumnSequence(columnDefault),
 
 			IsCompositePK: false, IsPK: false, IsFK: false,
 
-			GoName: GetGoFriendlyNameForColumn(currentColumnName),
-			GoType: resolvedGoType,
+			GoName:         GetGoFriendlyNameForColumn(currentColumnName),
+			GoType:         resolvedGoType,
+			GoNullableType: nullableType,
 
 			ConnectionPool: tbl.ConnectionPool,
 			Options:        tbl.Options,
@@ -378,6 +380,8 @@ func (tbl *Table) CollectComments() error {
 	}
 	defer rows.Close()
 
+	var counter int = 0
+
 	for rows.Next() {
 		err := rows.Scan(&currentComment, &currentObjsubid)
 		if err != nil {
@@ -390,7 +394,9 @@ func (tbl *Table) CollectComments() error {
 		} else {
 			if tbl.Columns != nil {
 				if len(tbl.Columns) > 0 {
-					tbl.Columns[(int(currentObjsubid) - 1)].DbComments = currentComment
+
+					tbl.Columns[counter].DbComments = currentComment
+					counter = counter + 1
 				}
 			}
 		}
