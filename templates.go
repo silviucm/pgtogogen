@@ -66,6 +66,13 @@ type {{.GoFriendlyName}} struct {
 }
 
 {{ $tableGoName := .GoFriendlyName}}
+{{range .Columns}}func (t *{{$tableGoName}}) Set{{.GoName}}(val {{.GoType}} {{if .Nullable}}, notNull bool{{end}}) {
+	t.{{.GoName}} = val
+	{{if .Nullable}}t.{{.GoName}}_IsNotNull = notNull{{end}}
+}
+{{end}}
+
+{{ $tableGoName := .GoFriendlyName}}
 /* Sorting helper containers */
 {{range $i, $e := .Columns}}
 // By{{$e.GoName}} implements sort.Interface for []{{$tableGoName}} based on
