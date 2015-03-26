@@ -601,39 +601,39 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(orderBy string) ([]{
 // The orderBy parameter must not contain the 'ORDER BY' keywords, and it can be empty, 
 // in which case the results are unpredictable.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
-// If operation succeeds, it returns the page-restricted rows, nil as error and the total number of records (count) in the table.
-// If operation fails, it returns nil and the error, and -1 as total number of records.
-func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageSize int, pageNumber int, orderBy string) ([]{{.GoFriendlyName}},  error, int) {
+// If operation succeeds, it returns the page-restricted rows, and nil as error.
+// If operation fails, it returns nil and the error.
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageSize int, pageNumber int, orderBy string) ([]{{.GoFriendlyName}},  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
 
 	if pageSize < 1 {
-		return nil, NewModelsErrorLocal(errorPrefix, "The pageSize parameter must be greater than or equal to 1"), -1
+		return nil, NewModelsErrorLocal(errorPrefix, "The pageSize parameter must be greater than or equal to 1")
 	}
 	if pageNumber < 1 {
-		return nil, NewModelsErrorLocal(errorPrefix, "The pageNumber parameter must be greater than or equal to 1"), -1
+		return nil, NewModelsErrorLocal(errorPrefix, "The pageNumber parameter must be greater than or equal to 1")
 	}
 
 	currentDbHandle := GetDb()
 	if currentDbHandle == nil {
-		return nil, NewModelsErrorLocal(errorPrefix, "the database handle is nil"), -1
+		return nil, NewModelsErrorLocal(errorPrefix, "the database handle is nil")
 	}
 
 	// try to get the rows from cache, if enabled and valid
 	if all{{.GoFriendlyName}}RowsFromCache, cacheValid := utilRef.Cache.GetAllRows() ; cacheValid == true {		
 				
 		if pageNumber == 1 {			
-			return all{{.GoFriendlyName}}RowsFromCache[:pageSize], nil, len(all{{.GoFriendlyName}}RowsFromCache)
+			return all{{.GoFriendlyName}}RowsFromCache[:pageSize], nil
 		}
 		
-		return all{{.GoFriendlyName}}RowsFromCache[((pageNumber-1)*pageSize):((pageNumber-1)*pageSize)+pageSize], nil, len(all{{.GoFriendlyName}}RowsFromCache)
+		return all{{.GoFriendlyName}}RowsFromCache[((pageNumber-1)*pageSize):((pageNumber-1)*pageSize)+pageSize], nil
 		
 	}
 	
 	// define the select query
 	var queryParts []string
 	
-	queryParts = append(queryParts, "SELECT (SELECT COUNT(1) FROM {{.DbName}}) as totalRowcount, t.* FROM ({{.GenericSelectQuery}} ")
+	queryParts = append(queryParts, "{{.GenericSelectQuery}} ")
 	
 	if orderBy != "" {
 		queryParts = append(queryParts, " ORDER BY ")
@@ -657,14 +657,12 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageSize int, pageNu
 		queryParts = append(queryParts, " OFFSET ")
 		queryParts = append(queryParts, pageOffset)
 	}
-	queryParts = append(queryParts, " ) AS t ")	
 	
 	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
-	var totalRowCount int32
 	rows, err := currentDbHandle.Query(JoinStringParts(queryParts,""))	
 
 	if err != nil {
-		return nil, NewModelsError(errorPrefix + " fatal error running the query:", err), -1
+		return nil, NewModelsError(errorPrefix + " fatal error running the query:", err)
 	}
 	defer rows.Close()
 
@@ -674,9 +672,9 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageSize int, pageNu
 		
 		{{$instanceVarName}} := {{.GoFriendlyName}}{}
 
-		err := rows.Scan(&totalRowCount, {{range $i, $e := .Columns}}&{{$instanceVarName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
+		err := rows.Scan( {{range $i, $e := .Columns}}&{{$instanceVarName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
 		if err != nil {
-			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err), -1
+			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err)
 		}
 		
 		sliceOf{{.GoFriendlyName}} = append(sliceOf{{.GoFriendlyName}}, current{{.GoFriendlyName}})
@@ -684,10 +682,10 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageSize int, pageNu
 	}
 	err = rows.Err()
 	if err != nil {
-		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err), -1
+		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
 	}	
 	
-	return sliceOf{{.GoFriendlyName}}, nil, int(totalRowCount)
+	return sliceOf{{.GoFriendlyName}}, nil
 }
 `
 
