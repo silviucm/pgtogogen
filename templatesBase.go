@@ -345,6 +345,11 @@ func Contains(source string, subStr string) bool {
 	return strings.Contains(source, subStr)
 }
 
+// Wrapper over strings.Join
+func JoinStringParts(sourceSlice []string, separator string) string {
+	return strings.Join(sourceSlice, separator)
+}
+
 // Sort comparator for string type
 func LessComparatorFor_string(first, second string) bool { return first < second }
 
