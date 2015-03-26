@@ -598,6 +598,9 @@ func (tbl *Table) GenerateSelectFunctions() {
 	// generate the caching functionality
 	tbl.generateAndAppendTemplate("tableCachingTemplate", TABLE_TEMPLATE_CACHE, "")
 
+	// generate the extra functionality (count, first, last, single)
+	tbl.generateAndAppendTemplate("tableCountTemplate", SELECT_TEMPLATE_COUNT, "")
+
 	fmt.Println("Table select functions generated.")
 
 }

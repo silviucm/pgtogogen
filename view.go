@@ -320,6 +320,9 @@ func (v *View) GenerateSelectFunctions() {
 	// generate the caching functionality
 	v.generateAndAppendTemplate("viewCachingTemplate", TABLE_TEMPLATE_CACHE, "")
 
+	// generate the extra functionality (count, first, last, single)
+	v.generateAndAppendTemplate("viewCountTemplate", SELECT_TEMPLATE_COUNT, "")
+
 	fmt.Println("View select functions generated.")
 
 }
