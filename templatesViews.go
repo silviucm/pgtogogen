@@ -11,16 +11,29 @@ const VIEW_TEMPLATE = `package {{.Options.PackageName}}
 
 import (	
 	"sync"
+	"github.com/silviucm/pgx"
 	{{range $key, $value := .GoTypesToImport}}"{{$value}}"
 	{{end}}
 )
 
+
+// this is a dummy variable, just to use the pgx package
+var pgxPackageViewReferenceErrDeadConn = pgx.ErrDeadConn
+
 const {{.GoFriendlyName}}_DB_VIEW_NAME string = "{{.DbName}}"
 
 type {{.GoFriendlyName}} struct {
-	{{range .Columns}}{{.GoName}} {{.GoType}} 
-	{{end}}		
+	{{range .Columns}}{{.GoName}} {{.GoType}}{{if .Nullable}}
+	{{.GoName}}_IsNotNull bool // if true, it means the corresponding field does not currently carry a null value
+	{{end}}{{end}}		
 }
+
+{{ $tableGoName := .GoFriendlyName}}
+{{range .Columns}}func (t *{{$tableGoName}}) Set{{.GoName}}(val {{.GoType}} {{if .Nullable}}, notNull bool{{end}}) {
+	t.{{.GoName}} = val
+	{{if .Nullable}}t.{{.GoName}}_IsNotNull = notNull{{end}}
+}
+{{end}}
 
 // fake, interal type to allow a singleton structure that would hold static-like methods
 type t{{.GoFriendlyName}}Utils struct {

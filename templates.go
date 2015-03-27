@@ -569,8 +569,9 @@ func (utilRef *t{{.ParentTable.GoFriendlyName}}Utils) {{$functionName}}{{.GoName
 	}
 
 	// define receiving params for the row iteration
-	{{range .ParentTable.Columns}}var param{{.GoName}} {{.GoType}}
-	{{end}}
+	{{range $e := .ParentTable.Columns}}{{if .Nullable}}var param{{.GoName}} {{$e.GoNullableType}}
+	{{else}}var param{{.GoName}} {{.GoType}}
+	{{end}}{{end}}
 
 	// define the select query
 	var query = "{{.ParentTable.GenericSelectQuery}} WHERE {{.DbName}} = $1";
@@ -586,9 +587,11 @@ func (utilRef *t{{.ParentTable.GoFriendlyName}}Utils) {{$functionName}}{{.GoName
     default:
            	// create the return structure as a pointer of the type
 			returnStruct = &{{.ParentTable.GoFriendlyName}}{
-				{{range .ParentTable.Columns}}{{.GoName}}: param{{.GoName}},
-				{{end}}
+				{{range .ParentTable.Columns}}{{if not .Nullable}}{{.GoName}}: param{{.GoName}},
+				{{end}}{{end}}
 			}
+			{{range $e := .ParentTable.Columns}}{{if $e.Nullable}}returnStruct.Set{{.GoName}}(param{{$e.GoName}}.GetValue(), param{{$e.GoName}}.Valid)
+			{{end}}{{end}}					
 			// return the structure
 			return returnStruct, nil
     }			
@@ -615,8 +618,9 @@ func (utilRef *t{{.ParentTable.GoFriendlyName}}Utils) {{$functionName}}` +
 	}
 
 	// define receiving params for the row iteration
-	{{range .ParentTable.Columns}}var param{{.GoName}} {{.GoType}}
-	{{end}}
+	{{range $e := .ParentTable.Columns}}{{if .Nullable}}var param{{.GoName}} {{$e.GoNullableType}}
+	{{else}}var param{{.GoName}} {{.GoType}}
+	{{end}}{{end}}
 
 	// define the select query
 	var query = "{{.ParentTable.GenericSelectQuery}} WHERE {{range $i, $e := .ParentTable.PKColumns}}{{.DbName}} = ${{print (plus1 $i)}}{{if ne (plus1 $i) $pkColCount}} AND {{end}}{{end}}";
@@ -634,9 +638,11 @@ func (utilRef *t{{.ParentTable.GoFriendlyName}}Utils) {{$functionName}}` +
     default:
            	// create the return structure as a pointer of the type
 			returnStruct = &{{.ParentTable.GoFriendlyName}}{
-				{{range .ParentTable.Columns}}{{.GoName}}: param{{.GoName}},
-				{{end}}
+				{{range .ParentTable.Columns}}{{if not .Nullable}}{{.GoName}}: param{{.GoName}},
+				{{end}}{{end}}
 			}
+			{{range $e := .ParentTable.Columns}}{{if $e.Nullable}}returnStruct.Set{{.GoName}}(param{{$e.GoName}}.GetValue(), param{{$e.GoName}}.Valid)
+			{{end}}{{end}}			
 			// return the structure
 			return returnStruct, nil
     }			

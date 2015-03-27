@@ -6,6 +6,43 @@ package main
 /* BEGIN: Atomic (non-transaction) Select Templates */
 /* ************************************************ */
 
+const COMMON_CODE_SELECT_QUERY_WHERE = `if err != nil {
+		return nil, NewModelsError(errorPrefix + " fatal error running the query:", err)
+	}
+	defer rows.Close()
+
+	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
+
+	// BEGIN: if any nullable fields, create temporary nullable variables to receive null values
+	{{range $i, $e := .Columns}}{{if .Nullable}}var nullable{{$e.GoName}} {{$e.GoNullableType}} 
+	{{end}}{{end}}
+	// END: if any nullable fields, create temporary nullable variables to receive null values
+
+	for rows.Next() {
+
+		// create a new instance of {{.GoFriendlyName}}  {{$instanceVarName := print "current" .GoFriendlyName}}
+		
+		{{$instanceVarName}} := {{.GoFriendlyName}}{}
+
+		err := rows.Scan({{range $i, $e := .Columns}}{{if .Nullable}}&nullable{{$e.GoName}}{{else}}&{{$instanceVarName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
+		if err != nil {
+			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err)
+		}
+		
+		// BEGIN: assign any nullable values to the nullable fields inside the struct appropriately
+		{{range $i, $e := .Columns}}{{if .Nullable}} {{$instanceVarName}}.Set{{.GoName}}(nullable{{$e.GoName}}.GetValue(), nullable{{$e.GoName}}.Valid)
+		{{end}}{{end}}
+		// END: assign any nullable values to the nullable fields inside the struct appropriately			
+		
+		sliceOf{{.GoFriendlyName}} = append(sliceOf{{.GoFriendlyName}}, current{{.GoFriendlyName}})
+
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
+	}
+`
+
 const COMMON_CODE_SELECT_TEMPLATE_WHERE_ATOMIC = `
 	currentDbHandle := GetDb()
 	if currentDbHandle == nil {
@@ -17,34 +54,9 @@ const COMMON_CODE_SELECT_TEMPLATE_WHERE_ATOMIC = `
 	
 	queryParts = append(queryParts, "{{.GenericSelectQuery}} WHERE ")
 	queryParts = append(queryParts, condition)
-	
-	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
-	rows, err := currentDbHandle.Query(JoinStringParts(queryParts,""), params...)
-
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " fatal error running the query:", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-
-		// create a new instance of {{.GoFriendlyName}}  {{$instanceVarName := print "current" .GoFriendlyName}}
 		
-		{{$instanceVarName}} := {{.GoFriendlyName}}{}
-
-		err := rows.Scan({{range $i, $e := .Columns}}&{{$instanceVarName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
-		if err != nil {
-			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err)
-		}
-		
-		sliceOf{{.GoFriendlyName}} = append(sliceOf{{.GoFriendlyName}}, current{{.GoFriendlyName}})
-
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
-	}
-`
+	rows, err := currentDbHandle.Query(JoinStringParts(queryParts,""), params...)	
+` + COMMON_CODE_SELECT_QUERY_WHERE
 
 const COMMON_CODE_SELECT_TEMPLATE_WHERE_ATOMIC_PAGED = `
 	currentDbHandle := GetDb()
@@ -75,34 +87,10 @@ const COMMON_CODE_SELECT_TEMPLATE_WHERE_ATOMIC_PAGED = `
 		queryParts = append(queryParts, " OFFSET ")
 		queryParts = append(queryParts, pageOffset)
 	}	
-	
-	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
+		
 	rows, err := currentDbHandle.Query(JoinStringParts(queryParts,""), params...)
 
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " fatal error running the query:", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-
-		// create a new instance of {{.GoFriendlyName}}  {{$instanceVarName := print "current" .GoFriendlyName}}
-		
-		{{$instanceVarName}} := {{.GoFriendlyName}}{}
-
-		err := rows.Scan({{range $i, $e := .Columns}}&{{$instanceVarName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
-		if err != nil {
-			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err)
-		}
-		
-		sliceOf{{.GoFriendlyName}} = append(sliceOf{{.GoFriendlyName}}, current{{.GoFriendlyName}})
-
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
-	}
-`
+` + COMMON_CODE_SELECT_QUERY_WHERE
 
 const COMMON_CODE_SELECT_TEMPLATE_WHERE_PAGED_CONDITION_HEADER = `
 	if condition == "" {
@@ -297,34 +285,10 @@ const COMMON_CODE_SELECT_TEMPLATE_WHERE_TRANSACTION = `
 	
 	queryParts = append(queryParts, "{{.GenericSelectQuery}} WHERE ")
 	queryParts = append(queryParts, condition)	
-	
-	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
+		
 	rows, err := txWrapper.Tx.Query(JoinStringParts(queryParts,""), params...)
 
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " fatal error running the query:", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-
-		// create a new instance of {{.GoFriendlyName}}  {{$instanceVarName := print "current" .GoFriendlyName}}
-		
-		{{$instanceVarName}} := {{.GoFriendlyName}}{}
-
-		err := rows.Scan({{range $i, $e := .Columns}}&{{$instanceVarName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
-		if err != nil {
-			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err)
-		}
-		
-		sliceOf{{.GoFriendlyName}} = append(sliceOf{{.GoFriendlyName}}, current{{.GoFriendlyName}})
-
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
-	}
-`
+` + COMMON_CODE_SELECT_QUERY_WHERE
 
 const COMMON_CODE_SELECT_TEMPLATE_WHERE_TRANSACTION_PAGED = `
 	if txWrapper == nil { return nil, NewModelsErrorLocal(errorPrefix, "the transaction wrapper is nil") }
@@ -353,34 +317,10 @@ const COMMON_CODE_SELECT_TEMPLATE_WHERE_TRANSACTION_PAGED = `
 		queryParts = append(queryParts, " OFFSET ")
 		queryParts = append(queryParts, pageOffset)
 	}	
-	
-	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
+		
 	rows, err := txWrapper.Tx.Query(JoinStringParts(queryParts,""), params...)
 
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " fatal error running the query:", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-
-		// create a new instance of {{.GoFriendlyName}}  {{$instanceVarName := print "current" .GoFriendlyName}}
-		
-		{{$instanceVarName}} := {{.GoFriendlyName}}{}
-
-		err := rows.Scan({{range $i, $e := .Columns}}&{{$instanceVarName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
-		if err != nil {
-			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err)
-		}
-		
-		sliceOf{{.GoFriendlyName}} = append(sliceOf{{.GoFriendlyName}}, current{{.GoFriendlyName}})
-
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
-	}
-`
+` + COMMON_CODE_SELECT_QUERY_WHERE
 
 const SELECT_TEMPLATE_WHERE_TX = `{{$colCount := len .Columns}}
 {{$functionName := print "Select" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
@@ -483,6 +423,43 @@ func (txWrapper *Transaction) {{$functionName}}(pageSize int, pageNumber int, ca
 /* BEGIN: Atomic (non-transaction) Select All Templates */
 /* **************************************************** */
 
+const COMMON_CODE_SELECT_ALL_QUERY = `if err != nil {
+		return nil, NewModelsError(errorPrefix + " fatal error running the query:", err)
+	}
+	defer rows.Close()
+	
+	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
+	
+	// BEGIN: if any nullable fields, create temporary nullable variables to receive null values
+	{{range $i, $e := .Columns}}{{if .Nullable}}var nullable{{$e.GoName}} {{$e.GoNullableType}} 
+	{{end}}{{end}}
+	// END: if any nullable fields, create temporary nullable variables to receive null values
+
+	for rows.Next() {
+
+		// create a new instance of {{.GoFriendlyName}}  {{$instanceVarName := print "current" .GoFriendlyName}}
+		
+		{{$instanceVarName}} := {{.GoFriendlyName}}{}
+
+		err := rows.Scan({{range $i, $e := .Columns}}{{if .Nullable}}&nullable{{$e.GoName}}{{else}}&{{$instanceVarName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
+		if err != nil {
+			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err)
+		}
+		
+		// BEGIN: assign any nullable values to the nullable fields inside the struct appropriately
+		{{range $i, $e := .Columns}}{{if .Nullable}} {{$instanceVarName}}.Set{{.GoName}}(nullable{{$e.GoName}}.GetValue(), nullable{{$e.GoName}}.Valid)
+		{{end}}{{end}}
+		// END: assign any nullable values to the nullable fields inside the struct appropriately	
+		
+		sliceOf{{.GoFriendlyName}} = append(sliceOf{{.GoFriendlyName}}, current{{.GoFriendlyName}})
+
+	}
+	err = rows.Err()
+	if err != nil {
+		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
+	}	
+`
+
 const SELECT_TEMPLATE_ALL = `{{$colCount := len .Columns}}
 {{$functionName := "SelectAll"}}{{$sourceStructName := print "source" .GoFriendlyName}}
 // Returns all the rows from {{.DbName}}.
@@ -501,34 +478,11 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() ([]{{.GoFriendlyNa
 	if all{{.GoFriendlyName}}RowsFromCache, cacheValid := utilRef.Cache.GetAllRows() ; cacheValid == true {		
 		return all{{.GoFriendlyName}}RowsFromCache, nil
 	}
-
-	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
+	
 	rows, err := currentDbHandle.Query("{{.GenericSelectQuery}}")
 
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " fatal error running the query:", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-
-		// create a new instance of {{.GoFriendlyName}}  {{$instanceVarName := print "current" .GoFriendlyName}}
+	` + COMMON_CODE_SELECT_ALL_QUERY + `
 		
-		{{$instanceVarName}} := {{.GoFriendlyName}}{}
-
-		err := rows.Scan({{range $i, $e := .Columns}}&{{$instanceVarName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
-		if err != nil {
-			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err)
-		}
-		
-		sliceOf{{.GoFriendlyName}} = append(sliceOf{{.GoFriendlyName}}, current{{.GoFriendlyName}})
-
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
-	}	
-	
 	return sliceOf{{.GoFriendlyName}}, nil
 }
 
@@ -562,34 +516,10 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(orderBy string) ([]{
 		queryParts = append(queryParts, " ORDER BY ")
 		queryParts = append(queryParts, orderBy)
 	}
-	
-
-	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
+		
 	rows, err := currentDbHandle.Query(JoinStringParts(queryParts,""))
 
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " fatal error running the query:", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-
-		// create a new instance of {{.GoFriendlyName}}  {{$instanceVarName := print "current" .GoFriendlyName}}
-		
-		{{$instanceVarName}} := {{.GoFriendlyName}}{}
-
-		err := rows.Scan({{range $i, $e := .Columns}}&{{$instanceVarName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
-		if err != nil {
-			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err)
-		}
-		
-		sliceOf{{.GoFriendlyName}} = append(sliceOf{{.GoFriendlyName}}, current{{.GoFriendlyName}})
-
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
-	}	
+	` + COMMON_CODE_SELECT_ALL_QUERY + `
 	
 	return sliceOf{{.GoFriendlyName}}, nil
 }
@@ -657,33 +587,10 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageSize int, pageNu
 		queryParts = append(queryParts, " OFFSET ")
 		queryParts = append(queryParts, pageOffset)
 	}
-	
-	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
+		
 	rows, err := currentDbHandle.Query(JoinStringParts(queryParts,""))	
 
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " fatal error running the query:", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-
-		// create a new instance of {{.GoFriendlyName}}  {{$instanceVarName := print "current" .GoFriendlyName}}
-		
-		{{$instanceVarName}} := {{.GoFriendlyName}}{}
-
-		err := rows.Scan( {{range $i, $e := .Columns}}&{{$instanceVarName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
-		if err != nil {
-			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err)
-		}
-		
-		sliceOf{{.GoFriendlyName}} = append(sliceOf{{.GoFriendlyName}}, current{{.GoFriendlyName}})
-
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
-	}	
+	` + COMMON_CODE_SELECT_ALL_QUERY + `
 	
 	return sliceOf{{.GoFriendlyName}}, nil
 }
@@ -709,33 +616,10 @@ func (txWrapper *Transaction) {{$functionName}}() ([]{{.GoFriendlyName}},  error
 	if all{{.GoFriendlyName}}RowsFromCache, cacheValid := {{if .IsTable}}Tables{{else}}Views{{end}}.{{.GoFriendlyName}}.Cache.GetAllRows() ; cacheValid == true {		
 		return all{{.GoFriendlyName}}RowsFromCache, nil
 	}
-
-	var sliceOf{{.GoFriendlyName}} []{{.GoFriendlyName}}
+	
 	rows, err := txWrapper.Tx.Query("{{.GenericSelectQuery}}")
 
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " fatal error running the query:", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-
-		// create a new instance of {{.GoFriendlyName}}  {{$instanceVarName := print "current" .GoFriendlyName}}
-		
-		{{$instanceVarName}} := {{.GoFriendlyName}}{}
-
-		err := rows.Scan({{range $i, $e := .Columns}}&{{$instanceVarName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
-		if err != nil {
-			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err)
-		}
-		
-		sliceOf{{.GoFriendlyName}} = append(sliceOf{{.GoFriendlyName}}, current{{.GoFriendlyName}})
-
-	}
-	err = rows.Err()
-	if err != nil {
-		return nil, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
-	}	
+	` + COMMON_CODE_SELECT_ALL_QUERY + `
 	
 	return sliceOf{{.GoFriendlyName}}, nil
 }
