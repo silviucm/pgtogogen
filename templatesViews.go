@@ -18,13 +18,13 @@ import (
 
 
 // this is a dummy variable, just to use the pgx package
-var pgxPackageViewReferenceErrDeadConn = pgx.ErrDeadConn
+var pgxPackageView{{.GoFriendlyName}}ReferenceErrDeadConn = pgx.ErrDeadConn
 
 const {{.GoFriendlyName}}_DB_VIEW_NAME string = "{{.DbName}}"
 
 type {{.GoFriendlyName}} struct {
-	{{range .Columns}}{{.GoName}} {{.GoType}}{{if .Nullable}}
-	{{.GoName}}_IsNotNull bool // if true, it means the corresponding field does not currently carry a null value
+	{{range .Columns}}{{.GoName}} {{.GoType}}
+	{{if .Nullable}}{{.GoName}}_IsNotNull bool // if true, it means the corresponding field does not currently carry a null value
 	{{end}}{{end}}		
 }
 
