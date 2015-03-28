@@ -39,25 +39,28 @@ type Column struct {
 func (col *Column) GeneratePKGetter(parentTable *Table) []byte {
 
 	col.ParentTable = parentTable
+	return col.getColumnTemplate("pkGetterTemplate", PK_GETTER_TEMPLATE_ATOMIC)
+}
 
-	// if the table has more than one columns as PK, supply the alternative template
-	var templateContent string = PK_GETTER_TEMPLATE_SINGLE_FIELD
-	if parentTable.PKColumns != nil && len(parentTable.PKColumns) > 1 {
-		templateContent = PK_GETTER_TEMPLATE_MULTI_FIELD
-	}
+func (col *Column) GeneratePKGetterTx(parentTable *Table) []byte {
 
-	tmpl, err := template.New("pkGetterTemplate").Funcs(fns).Parse(templateContent)
+	col.ParentTable = parentTable
+	return col.getColumnTemplate("pkGetterTemplate", PK_GETTER_TEMPLATE_TX)
+}
+
+func (col *Column) getColumnTemplate(templateName, templateContent string) []byte {
+
+	tmpl, err := template.New(templateName).Funcs(fns).Parse(templateContent)
 	if err != nil {
-		log.Fatal("GeneratePKGetter() fatal error running template.New:", err)
+		log.Fatal("getColumnTemplate() fatal error running template.New for template ", templateName, ":", err)
 	}
 
 	var generatedTemplate bytes.Buffer
 	err = tmpl.Execute(&generatedTemplate, col)
 	if err != nil {
-		log.Fatal("GeneratePKGetter() fatal error running template.Execute:", err)
+		log.Fatal("GeneratePKGetter() fatal error running template.Execute for template ", templateName, ":", err)
 	}
 
 	fmt.Println("PK Getter structure for column " + col.GoName + " generated.")
 	return generatedTemplate.Bytes()
-
 }

@@ -153,11 +153,16 @@ func (t *ToolOptions) Generate() {
 
 						// the getter should only return one row,
 						// no need to iterate here, just pass the first PK column,
-						// the GeneratePKGetter method will decide which template to pick
-						// based on the number of columns in the PK constraint
+						// the GeneratePKGetter template will render according to
+						// the number of PK fields
 						pkGetter := t.Tables[i].PKColumns[0].GeneratePKGetter(&t.Tables[i])
 						if _, writeErr := t.Tables[i].GeneratedTemplate.Write(pkGetter); writeErr != nil {
 							log.Fatal("Generate fatal error writing bytes from the GeneratePKGetter call: ", writeErr)
+						}
+
+						pkGetterTx := t.Tables[i].PKColumns[0].GeneratePKGetterTx(&t.Tables[i])
+						if _, writeErrTx := t.Tables[i].GeneratedTemplate.Write(pkGetterTx); writeErrTx != nil {
+							log.Fatal("Generate fatal error writing bytes from the GeneratePKGetterTx call: ", writeErrTx)
 						}
 
 					}
