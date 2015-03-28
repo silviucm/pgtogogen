@@ -175,6 +175,7 @@ func (tbl *Table) CollectPrimaryKeys() error {
 		for i := range tbl.Columns {
 			if tbl.Columns[i].DbName == currentColumnName {
 				tbl.Columns[i].IsPK = true
+				tbl.Columns[i].Nullable = false
 				tbl.Columns[i].IsCompositePK = false
 				numberOfPKs = numberOfPKs + 1
 

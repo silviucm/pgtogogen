@@ -127,10 +127,12 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) (
 	
 	{{$structInstanceName}}.CloneGlobalSettings()
 	
-	{{range $i, $e := .Columns}}{{if eq $e.GoType "time.Time"}}{{$structInstanceName}}.{{$e.GoName}}, err = To_Time_FromString(req.FormValue("{{$e.GoName}}"))	
-	{{else if eq $e.GoType "string"}}{{$structInstanceName}}.{{$e.GoName}} = req.FormValue("{{$e.GoName}}")
-	{{else}}{{$structInstanceName}}.{{$e.GoName}}, err = To_{{$e.GoType}}_FromString(req.FormValue("{{$e.GoName}}"))
-	{{end}}if err != nil { return nil, NewModelsError(errorPrefix, err) }
+	{{range $i, $e := .Columns}}{{if eq $e.GoType "time.Time"}}{{$structInstanceName}}.{{$e.GoName}}, err = To_Time_FromString(req.FormValue("{{$e.GoName}}"))
+	{{else if eq $e.GoType "string"}}{{$structInstanceName}}.{{$e.GoName}} = req.FormValue("{{$e.GoName}}") 
+	{{else}}{{$structInstanceName}}.{{$e.GoName}}, err = To_{{$e.GoType}}_FromString(req.FormValue("{{$e.GoName}}")) 
+	{{end}}if err != nil { return nil, NewModelsError(errorPrefix, err) } {{if .Nullable}}
+	if err == nil && req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = true }
+	{{end}}
 	{{end}}
 
 	return {{$structInstanceName}}, nil
@@ -139,21 +141,35 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) (
 {{$colCount := len .Columns}}{{$functionName := "CreateFromHttpRequestIgnoreErrors"}}
 // Creates a new pointer to a KiriUser from an Http Request.
 // The parameters are expected to match the struct field names
-// Unlike CreateFromHttpRequest, this method completely ignores parsing errors, 
-// so you will have to call Validate() on the structure if that structure has such a method.
-func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) *{{.GoFriendlyName}} {
+// Unlike CreateFromHttpRequest, this method completely does not exit when encountering parsing errors, 
+// but accumulates them into an []error slice. Futher Validation is needed.
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) (*{{.GoFriendlyName}}, []error) {
+	
+	if req == nil {
+		
+		var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
+		noReqErrors := []error { NewModelsErrorLocal(errorPrefix, "The *http.Request parameter provided was nil.") }
+		return nil, noReqErrors
+	}		
+	
+	var errors []error
+	var currentError error
 	
 	{{$structInstanceName := print "new" .GoFriendlyName}}{{$structInstanceName}} := &{{.GoFriendlyName}}{}
 	
 	{{$structInstanceName}}.CloneGlobalSettings()
 	
-	{{range $i, $e := .Columns}}{{if eq $e.GoType "time.Time"}}{{$structInstanceName}}.{{$e.GoName}}, _ = To_Time_FromString(req.FormValue("{{$e.GoName}}"))	
-	{{else if eq $e.GoType "string"}}{{$structInstanceName}}.{{$e.GoName}} = req.FormValue("{{$e.GoName}}")
-	{{else}}{{$structInstanceName}}.{{$e.GoName}}, _ = To_{{$e.GoType}}_FromString(req.FormValue("{{$e.GoName}}"))
-	{{end}}
+	{{range $i, $e := .Columns}}{{if eq $e.GoType "time.Time"}}{{$structInstanceName}}.{{$e.GoName}}, currentError = To_Time_FromString(req.FormValue("{{$e.GoName}}"))	
+	{{else if eq $e.GoType "string"}}{{$structInstanceName}}.{{$e.GoName}} = req.FormValue("{{$e.GoName}}")	
+	{{else}}{{$structInstanceName}}.{{$e.GoName}}, currentError = To_{{$e.GoType}}_FromString(req.FormValue("{{$e.GoName}}"))
+	{{end}} {{if .Nullable}}
+	{{if eq $e.GoType "string"}}if req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = true }{{else}}
+	if currentError == nil && req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = true }{{end}}
+	{{end}}if currentError != nil { errors = append(errors, currentError) }
 	{{end}}
 
-	return {{$structInstanceName}}
+	
+	return {{$structInstanceName}}, errors
 }
 
 {{$colCount := len .Columns}}{{$functionName := "CloneGlobalSettings"}}{{$structInstanceName := print "instance" .GoFriendlyName}}
