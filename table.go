@@ -607,6 +607,8 @@ func (tbl *Table) GenerateSelectFunctions() {
 
 	// generate the extra functionality (count, first, last, single)
 	tbl.generateAndAppendTemplate("tableCountTemplate", SELECT_TEMPLATE_COUNT, "")
+	tbl.generateAndAppendTemplate("tableSingleTemplate", SELECT_TEMPLATE_SINGLE_ATOMIC, "")
+	tbl.generateAndAppendTemplate("tableSingleTemplate", SELECT_TEMPLATE_SINGLE_TX, "")
 
 	fmt.Println("Table select functions generated.")
 

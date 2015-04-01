@@ -326,6 +326,8 @@ func (v *View) GenerateSelectFunctions() {
 
 	// generate the extra functionality (count, first, last, single)
 	v.generateAndAppendTemplate("viewCountTemplate", SELECT_TEMPLATE_COUNT, "")
+	v.generateAndAppendTemplate("viewSingleTemplate", SELECT_TEMPLATE_SINGLE_ATOMIC, "")
+	v.generateAndAppendTemplate("viewSingleTemplate", SELECT_TEMPLATE_SINGLE_TX, "")
 
 	fmt.Println("View select functions generated.")
 

@@ -63,6 +63,8 @@ var ErrDeadConn = pgx.ErrDeadConn
 var ErrTxClosed = pgx.ErrTxClosed
 var ErrNotificationTimeout = pgx.ErrNotificationTimeout
 
+var ErrTooManyRows =  errors.New("More than one row returned.")
+
 // Transaction isolation levels for the pgx package
 
 var IsoLevelSerializable = pgx.Serializable
