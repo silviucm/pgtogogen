@@ -43,7 +43,8 @@ const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.DbName}}"
 
 {{if ne .DbComments ""}}/* {{.DbComments}} */{{end}}
 type {{.GoFriendlyName}} struct {
-	{{range .Columns}}{{if ne .DbComments ""}}/* {{.DbComments}} */
+	{{range .Columns}}// database field name: {{.DbName}}
+	{{if ne .DbComments ""}}/* {{.DbComments}} */		
 	{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
 	{{if .Nullable}}{{.GoName}}_IsNotNull bool // if true, it means the corresponding field does not currently carry a null value{{end}}
 

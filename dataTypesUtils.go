@@ -35,6 +35,13 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn string, nu
 	nullableTypeReturn = ""
 
 	switch columnType {
+
+	case "boolean":
+		typeReturn = "bool"
+		if nullable {
+			nullableTypeReturn = "pgx.NullBool"
+		}
+
 	case "character varying":
 		typeReturn = "string"
 		if nullable {
@@ -47,10 +54,16 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn string, nu
 			nullableTypeReturn = "pgx.NullInt32"
 		}
 
-	case "boolean":
-		typeReturn = "bool"
+	case "json", "jsonb":
+		typeReturn = "string"
 		if nullable {
-			nullableTypeReturn = "pgx.NullBool"
+			nullableTypeReturn = "pgx.NullString"
+		}
+
+	case "numeric":
+		typeReturn = "float64"
+		if nullable {
+			nullableTypeReturn = "pgx.NullFloat64"
 		}
 
 	case "uuid":

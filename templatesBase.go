@@ -410,6 +410,9 @@ func LessComparatorFor_int32(first, second int32) bool { return first < second }
 // Sort comparator for int64 type
 func LessComparatorFor_int64(first, second int64) bool { return first < second }
 
+// Sort comparator for float64 type
+func LessComparatorFor_float64(first, second float64) bool { return first < second }
+
 // Sort comparator for bool type
 func LessComparatorFor_bool(first, second bool) bool { return first == false }
 
@@ -481,6 +484,18 @@ func To_int64_FromString(int64Str string) (int64, error) {
 	}		
 		
 	return strconv.ParseInt(int64Str, 10, 64)
+
+}
+
+func To_float64_FromString(float64Str string) (float64, error) {
+	
+	var errorPrefix = "To_float64_FromString() ERROR: "
+	
+	if float64Str == "" {
+		return -1, NewModelsErrorLocal(errorPrefix, "The input parameter is an empty string.")
+	}		
+		
+	return strconv.ParseFloat(float64Str, 64)
 
 }
 `

@@ -23,9 +23,11 @@ var pgxPackageView{{.GoFriendlyName}}ReferenceErrDeadConn = pgx.ErrDeadConn
 const {{.GoFriendlyName}}_DB_VIEW_NAME string = "{{.DbName}}"
 
 type {{.GoFriendlyName}} struct {
-	{{range .Columns}}{{.GoName}} {{.GoType}}
+	{{range .Columns}}// database field name: {{.DbName}}
+	{{.GoName}} {{.GoType}}
 	{{if .Nullable}}{{.GoName}}_IsNotNull bool // if true, it means the corresponding field does not currently carry a null value
-	{{end}}{{end}}		
+	{{end}}
+	{{end}}		
 }
 
 {{ $tableGoName := .GoFriendlyName}}
