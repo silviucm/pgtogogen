@@ -31,6 +31,8 @@ type ToolOptions struct {
 	Tables []Table
 	Views  []View
 
+	Functions []Function
+
 	// internal counter for materialized views
 	noMaterializedViews int
 }
@@ -533,6 +535,46 @@ ORDER BY
 		t.Views = append(t.Views, *currentView)
 
 		t.noMaterializedViews = t.noMaterializedViews + 1
+
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return nil
+
+}
+
+func (t *ToolOptions) CollectFunctions() error {
+
+	var currentFunctionName string
+
+	var functionNamesQuery string = `SELECT r.routine_name FROM information_schema.routines r
+			WHERE r.routine_schema=$1 AND routine_catalog=$2 AND r.routine_type = 'FUNCTION'
+			ORDER BY r.routine_name;`
+
+	rows, err := t.ConnectionPool.Query(functionNamesQuery, t.DbSchema, t.DbName)
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		err := rows.Scan(&currentFunctionName)
+		if err != nil {
+			log.Fatal("CollectFunctions fatal error inside rows.Next() iteration: ", err)
+		}
+
+		// instantiate a function struct and also collect all the necessary information
+		currentFunction, err := CollectFunction(t, currentFunctionName)
+		if err != nil {
+			log.Fatal("CollectFunctions fatal error inside a CollectFunction() routine: ", err)
+		}
+
+		// add the function to the slice
+		t.Functions = append(t.Functions, currentFunction)
 
 	}
 	err = rows.Err()
