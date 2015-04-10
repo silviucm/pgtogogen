@@ -573,8 +573,10 @@ func (t *ToolOptions) CollectFunctions() error {
 			log.Fatal("CollectFunctions fatal error inside a CollectFunction() routine: ", err)
 		}
 
-		// add the function to the slice
-		t.Functions = append(t.Functions, currentFunction)
+		// add the function to the slice if not nil
+		if currentFunction != nil {
+			t.Functions = append(t.Functions, *currentFunction)
+		}
 
 	}
 	err = rows.Err()

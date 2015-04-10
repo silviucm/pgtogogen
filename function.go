@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"github.com/silviucm/pgx"
 	"log"
+	"strings"
 )
 
 /* Function Section */
@@ -17,12 +19,19 @@ type Function struct {
 
 	Parameters []FunctionParameter
 
-	ReturnType          string
+	ReturnType         string
+	ReturnGoType       string
+	ReturnNullableType string
+
+	IsReturnVoid        bool
 	IsReturnUserDefined bool
 	IsReturnASet        bool
 	IsReturnARecord     bool
 	IsReturnTable       bool
 	IsReturnView        bool
+
+	GeneratedTemplate bytes.Buffer
+	GoTypesToImport   map[string]string
 }
 
 type FunctionParameter struct {
@@ -30,10 +39,12 @@ type FunctionParameter struct {
 	GoFriendlyName string
 	DbComments     string
 
-	// can be "Input", "Output", "Variant"
-	ParamType string
+	// can be "Input", "Output", "InOut", "Variant"
+	Mode string
 
-	ParamDataType string
+	Type           string
+	GoType         string
+	GoNullableType string
 
 	IsOptional   bool
 	DefaultValue string
@@ -46,36 +57,214 @@ const (
 	FUNC_PARAM_TYPE_VARIANT = "Variant"
 )
 
-func CollectFunction(t *ToolOptions, functionName string) (Function, error) {
+func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 
 	// for more info, check this url
 	// http://www.alberton.info/postgresql_meta_info.html
 
 	// the general function details query
-	var functionDetailsQuery string = `SELECT r.routine_name, r.data_type, r.type_udt_name FROM information_schema.routines r
-WHERE r.routine_schema=$1 AND routine_catalog=$2 AND r.routine_type = 'FUNCTION'
-ORDER BY r.routine_name;
+	var functionDetailsQuery string = `
+		SELECT r.routine_name, r.data_type, r.type_udt_name,  
+		proc_details.proretset  
+		FROM information_schema.routines r,
+		(
+		SELECT pg_proc.*
+		FROM pg_catalog.pg_proc
+		JOIN pg_catalog.pg_namespace ON (pg_proc.pronamespace = pg_namespace.oid)
+		WHERE pg_proc.prorettype <> 'pg_catalog.cstring'::pg_catalog.regtype
+		AND (pg_proc.proargtypes[0] IS NULL
+		OR pg_proc.proargtypes[0] <> 'pg_catalog.cstring'::pg_catalog.regtype)
+		AND NOT pg_proc.proisagg
+		AND pg_proc.proname = $1 -- function name param here
+		AND pg_namespace.nspname = $2 -- schema param here
+		AND pg_catalog.pg_function_is_visible(pg_proc.oid) 
+		LIMIT 1
+		) as proc_details
+		WHERE r.routine_schema=$3 AND routine_catalog=$4 AND r.routine_name=$5 
+		AND r.routine_type = 'FUNCTION' 
+		AND proc_details.proname = r.routine_name
+		ORDER BY r.routine_name;`
 
-SELECT routines.* FROM information_schema.routines
-WHERE routines.specific_schema='public' AND routine_type = 'FUNCTION'
-ORDER BY routines.routine_name;
+	var routineName, routineDataType, routineUdtName string
+	var isSetOf bool = false
 
-
-SELECT routines.routine_name, parameters.*
-FROM information_schema.routines
-    JOIN information_schema.parameters ON routines.specific_name=parameters.specific_name
-WHERE routines.specific_schema='public'
-ORDER BY routines.routine_name, parameters.ordinal_position;
-	`
-
-	rows, err := t.ConnectionPool.Query(functionDetailsQuery, t.DbSchema, t.DbName)
+	err := t.ConnectionPool.QueryRow(functionDetailsQuery, functionName, t.DbSchema, t.DbSchema, t.DbName, functionName).Scan(&routineName, &routineDataType, &routineUdtName, &isSetOf)
 
 	if err != nil {
-		log.Fatal("CollectColumns() fatal error running the query:", err)
+		log.Fatal("CollectFunction() fatal error running the QueryRow:", err)
+	}
+
+	// create a function holder struct
+	newFunction := &Function{
+		ConnectionPool:    t.ConnectionPool,
+		Options:           t,
+		DbName:            routineName,
+		GoFriendlyName:    GetGoFriendlyNameForFunction(routineName),
+		IsReturnASet:      isSetOf,
+		GeneratedTemplate: bytes.Buffer{},
+	}
+
+	// determine if the return type is user defined or standard postgres type
+	if routineDataType == "USER-DEFINED" {
+
+		found := false
+		// iterate through the list of tables and views and see if they match the UDT type provided
+		for _, currentTable := range t.Tables {
+			if currentTable.DbName == routineUdtName {
+				found = true
+				newFunction.ReturnType = currentTable.DbName
+				newFunction.ReturnGoType = currentTable.GoFriendlyName
+			}
+		}
+		for _, currentView := range t.Views {
+			if currentView.DbName == routineUdtName {
+				found = true
+				newFunction.ReturnType = currentView.DbName
+				newFunction.ReturnGoType = currentView.GoFriendlyName
+			}
+		}
+		if found == false {
+			log.Println("CollectFunction(): function ", functionName, " has USER-DEFINED data type but no table or view with name ", routineUdtName, " found. Skipping.")
+			return nil, nil
+		}
+
+	} else {
+
+		// the function returns a regular Postgres type, so make sure it's not void first
+		if routineDataType == "void" {
+			newFunction.IsReturnVoid = true
+		} else {
+
+			newFunction.ReturnType = routineDataType
+
+			// get the corresponding go type
+			correspondingGoType, nullableType, goTypeToImport := GetGoTypeForColumn(routineDataType, true)
+
+			if goTypeToImport != "" {
+				if newFunction.GoTypesToImport == nil {
+					newFunction.GoTypesToImport = make(map[string]string)
+				}
+
+				newFunction.GoTypesToImport[goTypeToImport] = goTypeToImport
+			}
+
+			newFunction.ReturnGoType = correspondingGoType
+			newFunction.ReturnNullableType = nullableType
+		}
+	}
+
+	// get the parameters
+	newFunction.CollectParameters()
+
+	return newFunction, nil
+
+}
+
+func (f *Function) CollectParameters() {
+
+	var currentParameterName, parameterDataType, parameterMode string
+	var parameterDefault pgx.NullString
+	var parameterOrdinalPosition pgx.NullInt32
+
+	var paramsQuery = `
+		SELECT p.parameter_name, p.data_type, p.parameter_mode, p.parameter_default, p.ordinal_position
+		FROM information_schema.routines r
+		    JOIN information_schema.parameters p ON r.specific_name=p.specific_name
+		WHERE r.routine_schema=$1 AND r.routine_catalog=$2 AND r.routine_name=$3 
+		AND r.routine_type = 'FUNCTION' 
+		ORDER BY r.routine_name, p.ordinal_position;
+	`
+
+	rows, err := f.ConnectionPool.Query(paramsQuery, f.Options.DbSchema, f.Options.DbName, f.DbName)
+
+	if err != nil {
+		log.Fatal("CollectParameters() fatal error running the query:", err)
 	}
 	defer rows.Close()
 
-	// todo
-	return Function{}, nil
+	for rows.Next() {
+		err := rows.Scan(&currentParameterName, &parameterDataType, &parameterMode, &parameterDefault, &parameterOrdinalPosition)
+		if err != nil {
+			log.Fatal("CollectParameters() fatal error inside rows.Next() iteration: ", err)
+		}
 
+		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(parameterDataType, false)
+
+		if goTypeToImport != "" {
+			if f.GoTypesToImport == nil {
+				f.GoTypesToImport = make(map[string]string)
+			}
+			f.GoTypesToImport[goTypeToImport] = goTypeToImport
+		}
+
+		var parameterDefaultVal string = ""
+		if parameterDefault.Valid && parameterDefault.String != "" {
+			parameterDefaultVal = parameterDefault.String
+		}
+
+		// instantiate a function parameter struct
+		currentParam := &FunctionParameter{
+			DbName:       currentParameterName,
+			Type:         parameterDataType,
+			DefaultValue: parameterDefaultVal,
+
+			GoFriendlyName: GetGoFriendlyNameForFunctionParam(currentParameterName),
+			GoType:         resolvedGoType,
+			GoNullableType: nullableType,
+		}
+
+		if currentParam.GoType != "" {
+			f.Parameters = append(f.Parameters, *currentParam)
+		}
+
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return
+
+}
+
+/* Util methods */
+
+func GetGoFriendlyNameForFunction(routineName string) string {
+
+	// find if the table name has underscore
+	if strings.Contains(routineName, "_") == false {
+		return strings.Title(routineName)
+	}
+
+	subNames := strings.Split(routineName, "_")
+
+	if subNames == nil {
+		log.Fatal("GetGoFriendlyNameForFunction() fatal error for function name: ", routineName, ". Please ensure a valid function name is provided.")
+	}
+
+	for i := range subNames {
+		subNames[i] = strings.Title(subNames[i])
+	}
+
+	return strings.Join(subNames, "")
+}
+
+func GetGoFriendlyNameForFunctionParam(paramName string) string {
+
+	// find if the table name has underscore
+	if strings.Contains(paramName, "_") == false {
+		return strings.Title(paramName)
+	}
+
+	subNames := strings.Split(paramName, "_")
+
+	if subNames == nil {
+		log.Fatal("GetGoFriendlyNameForFunctionParam() fatal error for param name: ", paramName, ". Please ensure a valid param name is provided.")
+	}
+
+	for i := range subNames {
+		subNames[i] = strings.Title(subNames[i])
+	}
+
+	return strings.Join(subNames, "")
 }

@@ -38,10 +38,10 @@ func LowerFirstChar(original string) string {
 // Checks if the file with the given path exists, returns true if yes
 func FileExists(name string) bool {
 
-	if _, err := os.Stat(name); err != nil {
-		if os.IsNotExist(err) {
-			return false
-		}
+	if _, err := os.Stat(name); err == nil {
+		return true
 	}
-	return true
+
+	return false
+
 }

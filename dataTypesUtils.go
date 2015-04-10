@@ -110,7 +110,7 @@ func DecodeNullable(isNullable string) bool {
 		return false
 	}
 
-	if isNullable == "YES" || isNullable == "Yes" || isNullable == "yes" {
+	if isNullable == "YES" || isNullable == "Yes" || isNullable == "yes" || isNullable == "y" || isNullable == "Y" {
 		return true
 	}
 
