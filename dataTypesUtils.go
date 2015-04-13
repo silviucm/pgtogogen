@@ -48,6 +48,12 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn string, nu
 			nullableTypeReturn = "pgx.NullString"
 		}
 
+	case "double precision":
+		typeReturn = "float64"
+		if nullable {
+			nullableTypeReturn = "pgx.NullFloat64"
+		}
+
 	case "integer", "serial":
 		typeReturn = "int32"
 		if nullable {
@@ -61,9 +67,9 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn string, nu
 		}
 
 	case "numeric":
-		typeReturn = "float64"
+		typeReturn = "string"
 		if nullable {
-			nullableTypeReturn = "pgx.NullFloat64"
+			nullableTypeReturn = "pgx.NullString"
 		}
 
 	case "uuid":
