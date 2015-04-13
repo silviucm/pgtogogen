@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/silviucm/pgx"
 	"log"
 	"strings"
+	"text/template"
 )
 
 /* Function Section */
@@ -57,6 +59,8 @@ const (
 	FUNC_PARAM_TYPE_VARIANT = "Variant"
 )
 
+var FunctionFileGoTypesToImport map[string]string = make(map[string]string)
+
 func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 
 	// for more info, check this url
@@ -75,8 +79,8 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 		AND (pg_proc.proargtypes[0] IS NULL
 		OR pg_proc.proargtypes[0] <> 'pg_catalog.cstring'::pg_catalog.regtype)
 		AND NOT pg_proc.proisagg
-		AND pg_proc.proname = $1 -- function name param here
-		AND pg_namespace.nspname = $2 -- schema param here
+		AND pg_proc.proname = $1 
+		AND pg_namespace.nspname = $2 
 		AND pg_catalog.pg_function_is_visible(pg_proc.oid) 
 		LIMIT 1
 		) as proc_details
@@ -101,6 +105,7 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 		DbName:            routineName,
 		GoFriendlyName:    GetGoFriendlyNameForFunction(routineName),
 		IsReturnASet:      isSetOf,
+		IsReturnARecord:   (isSetOf == false),
 		GeneratedTemplate: bytes.Buffer{},
 	}
 
@@ -127,6 +132,7 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 			log.Println("CollectFunction(): function ", functionName, " has USER-DEFINED data type but no table or view with name ", routineUdtName, " found. Skipping.")
 			return nil, nil
 		}
+		newFunction.IsReturnUserDefined = true
 
 	} else {
 
@@ -224,6 +230,71 @@ func (f *Function) CollectParameters() {
 	}
 
 	return
+
+}
+
+func (f *Function) Generate() {
+
+	f.generateAndAppendTemplate("GenerateFunction", FUNCTION_TEMPLATE, "Function generated.")
+
+}
+
+func (f *Function) WriteToBuffer(functionBuffer *bytes.Buffer) {
+
+	_, err := functionBuffer.Write(f.GeneratedTemplate.Bytes())
+	if err != nil {
+		log.Fatal("WriteToBuffer() for function ", f.DbName, " fatal error running template.Execute:", err)
+	}
+
+}
+
+func (f *Function) generateAndAppendTemplate(templateName string, templateContent string, taskCompletionMessage string) {
+
+	tmpl, err := template.New(templateName).Funcs(fns).Parse(templateContent)
+	if err != nil {
+		log.Fatal(templateName+" fatal error running template.New:", err)
+	}
+
+	var generatedTemplate bytes.Buffer
+	err = tmpl.Execute(&generatedTemplate, f)
+	if err != nil {
+		log.Fatal(templateName+" fatal error running template.Execute:", err)
+	}
+
+	if _, err = f.GeneratedTemplate.Write(generatedTemplate.Bytes()); err != nil {
+		log.Fatal(templateName+" fatal error writing the generated template bytes to the function buffer:", err)
+	}
+
+	if taskCompletionMessage != "" {
+		fmt.Println(taskCompletionMessage)
+	}
+
+}
+
+func generateFunctionFilePrefix(t *ToolOptions, functionBuffer *bytes.Buffer) {
+
+	templateName := "FUNCTION_TEMPLATE_PREFIX"
+	templateCode := FUNCTION_TEMPLATE_PREFIX
+
+	tmpl, err := template.New("FunctionPrefixTemplate").Funcs(fns).Parse(templateCode)
+	if err != nil {
+		log.Fatal(templateName, " template: fatal error running template.New:", err)
+	}
+
+	functionData := struct {
+		Options         *ToolOptions
+		GoTypesToImport map[string]string
+	}{t, FunctionFileGoTypesToImport}
+
+	var generatedTemplate bytes.Buffer
+	err = tmpl.Execute(&generatedTemplate, functionData)
+	if err != nil {
+		log.Fatal(templateName+" fatal error running template.Execute:", err)
+	}
+
+	if _, err = functionBuffer.Write(generatedTemplate.Bytes()); err != nil {
+		log.Fatal(templateName+" fatal error writing the generated template bytes to the function buffer:", err)
+	}
 
 }
 

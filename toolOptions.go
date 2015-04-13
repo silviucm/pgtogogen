@@ -113,6 +113,12 @@ func (t *ToolOptions) Collect() {
 	} else {
 		fmt.Println("Done: No materialized views found.")
 	}
+
+	// collect all the user functions from the database
+	fmt.Print("Collecting functions...")
+	if err := t.CollectFunctions(); err != nil {
+		log.Fatal("Collect(): CollectFunctions fatal error: ", err)
+	}
 }
 
 func (t *ToolOptions) Generate() {
@@ -196,6 +202,23 @@ func (t *ToolOptions) Generate() {
 		fmt.Println("Done: No views found.")
 	}
 
+	// iterate through each function and generate it
+	if t.Functions != nil {
+
+		if len(t.Functions) > 0 {
+
+			for i := range t.Functions {
+
+				fmt.Println("--------------------------------------------------------------------------------------------")
+				log.Println("Beginning generation for function: ", t.Functions[i].DbName)
+				fmt.Println("--------------------------------------------------------------------------------------------")
+
+				t.Functions[i].Generate()
+			}
+		}
+
+	}
+
 }
 
 func (t *ToolOptions) WriteFiles() {
@@ -237,6 +260,28 @@ func (t *ToolOptions) WriteFiles() {
 	} else {
 		fmt.Println("Done: No views found.")
 	}
+
+	// iterate through each function and write it to the functions file
+	if t.Functions != nil {
+
+		if len(t.Functions) > 0 {
+
+			functionFileBuffer := bytes.Buffer{}
+
+			generateFunctionFilePrefix(t, &functionFileBuffer)
+
+			for i := range t.Functions {
+
+				// generate the table structure
+				t.Functions[i].WriteToBuffer(&functionFileBuffer)
+			}
+
+			t.WriteFunctionFiles(&functionFileBuffer)
+		}
+
+	} else {
+		fmt.Println("Done: No functions found.")
+	}
 }
 
 func (t *ToolOptions) WriteBaseFiles() {
@@ -245,6 +290,36 @@ func (t *ToolOptions) WriteBaseFiles() {
 	t.writeBaseTemplateFile("db settings base file", BASE_TEMPLATE_SETTINGS, "modelsDbSettings.go", false)
 	t.writeBaseTemplateFile("collections base file", BASE_TEMPLATE_COLLECTIONS, "modelsCollections.go", false)
 	t.writeBaseTemplateFile("collections base file", BASE_TEMPLATE_FORMS, "modelsForms.go", false)
+
+}
+
+func (t *ToolOptions) WriteFunctionFiles(functionFileBuffer *bytes.Buffer) {
+
+	var filePath string = t.OutputFolder + "/" + "modelsDbFunctions.go"
+	var overwritable bool = true
+
+	if overwritable {
+
+		err := ioutil.WriteFile(filePath, functionFileBuffer.Bytes(), 0644)
+		if err != nil {
+			log.Fatal("WriteFunctionFiles() - WriteToFile() fatal error writing to file:", err)
+		}
+
+		fmt.Println("Finished generating the functions file. Filepath: " + filePath)
+
+	} else {
+
+		if FileExists(filePath) {
+			fmt.Println("Skipping generating functions file. Filepath: " + filePath + " already exists.")
+		} else {
+			err := ioutil.WriteFile(filePath, functionFileBuffer.Bytes(), 0644)
+			if err != nil {
+				log.Fatal("WriteFunctionFiles() - fatal error writing to file:", err)
+			}
+
+			fmt.Println("Finished generating the function file. Filepath: " + filePath)
+		}
+	}
 
 }
 
