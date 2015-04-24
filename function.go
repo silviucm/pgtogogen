@@ -25,6 +25,8 @@ type Function struct {
 	ReturnGoType       string
 	ReturnNullableType string
 
+	Columns           []Column  // column definitions if the return type is a table
+
 	IsReturnVoid        bool
 	IsReturnUserDefined bool
 	IsReturnASet        bool
@@ -119,6 +121,7 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 				found = true
 				newFunction.ReturnType = currentTable.DbName
 				newFunction.ReturnGoType = currentTable.GoFriendlyName
+				newFunction.Columns = currentTable.Columns
 			}
 		}
 		for _, currentView := range t.Views {
@@ -126,6 +129,7 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 				found = true
 				newFunction.ReturnType = currentView.DbName
 				newFunction.ReturnGoType = currentView.GoFriendlyName
+				newFunction.Columns = currentView.Columns
 			}
 		}
 		if found == false {

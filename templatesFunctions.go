@@ -20,6 +20,68 @@ var pgxErrDeadConnFunc = pgx.ErrDeadConn
 // and global, single-instance settings
 type tFunctionUtils struct {}
 
+var Functions tFunctionUtils
+
+`
+
+const COMMON_CODE_FUNCTION_QUERY = `if err != nil {
+		return {{if not .IsReturnVoid}}returnVal,{{end}} NewModelsError(errorPrefix + " fatal error running the function statement:", err)
+	}
+	defer rows.Close()
+
+	{{if .IsReturnVoid}}
+	// this function returns void, do not attempt doing anything else
+	return nil
+	{{else}}//BEGIN: non void operations
+
+	// BEGIN: if any nullable fields, create temporary nullable variables to receive null values
+	{{range $i, $e := .Columns}}{{if .Nullable}}var nullable{{$e.GoName}} {{$e.GoNullableType}} 
+	{{end}}{{end}}
+	// END: if any nullable fields, create temporary nullable variables to receive null values
+
+	for rows.Next() {
+
+		// create a new variable of type {{.ReturnGoType}}  {{$instanceVarName := print "current" .ReturnGoType}}			
+		var {{$instanceVarName}} {{.ReturnGoType}}		
+		
+	{{if .IsReturnUserDefined}}		// BEGIN: User-defined return type collection (slice)
+
+		{{$colCount := len .Columns}}
+		err := rows.Scan({{range $i, $e := .Columns}}{{if .Nullable}}&nullable{{$e.GoName}}{{else}}&{{$instanceVarName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}})
+		if err != nil {
+			return returnVal, NewModelsError(errorPrefix + " error during rows.Scan():", err)
+		}
+		
+		// BEGIN: assign any nullable values to the nullable fields inside the struct appropriately
+		{{range $i, $e := .Columns}}{{if .Nullable}} {{$instanceVarName}}.Set{{.GoName}}(nullable{{$e.GoName}}.GetValue(), nullable{{$e.GoName}}.Valid)
+		{{end}}{{end}}
+		// END: assign any nullable values to the nullable fields inside the struct appropriately	
+		
+		// END: User-defined (internal types) return type collection (slice)		
+	{{else}}	// BEGIN: Not-user-defined (internal types) return type collection (slice)
+	
+		err = rows.Scan(&{{$instanceVarName}})
+		if err != nil {
+			return returnVal, NewModelsError(errorPrefix + " error during rows.Scan():", err)
+		}							
+		// END: Not-User-defined (internal types) return type collection (slice)			
+	{{end}}
+				
+		{{if .IsReturnASet}}// a set is returned (expect one or more records)
+		returnVal = append(returnVal, {{$instanceVarName}})
+		{{else}}// single record (expect at most one record)
+		returnVal = {{if .IsReturnUserDefined}}&{{end}}{{$instanceVarName}}
+		{{end}}		
+
+	}
+	err = rows.Err()
+	if err != nil {
+		return returnVal, NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
+	}
+	
+	{{end}} //END: non void operations
+
+
 `
 
 const FUNCTION_TEMPLATE = `{{$paramCount := len .Parameters}}
@@ -27,7 +89,7 @@ const FUNCTION_TEMPLATE = `{{$paramCount := len .Parameters}}
 // Wrapper over the function named {{.DbName}}
 func (utilRef *tFunctionUtils) {{$functionName}}(` +
 	`{{range $i, $e := .Parameters}}param{{.GoFriendlyName}} {{.GoType}}{{if ne (plus1 $i) $paramCount}},{{end}} {{end}})` +
-	` ({{if not .IsReturnVoid}}returnVal {{if .IsReturnASet}}[]{{end}}{{.ReturnGoType}},{{end}} err error) {
+	` ({{if not .IsReturnVoid}}returnVal {{if .IsReturnASet}}[]{{else}}{{if .IsReturnUserDefined}}*{{end}}{{end}}{{.ReturnGoType}},{{end}} err error) {
 						
 	var errorPrefix = "tFunctionUtils.{{$functionName}}() ERROR: "
 	
@@ -41,24 +103,12 @@ func (utilRef *tFunctionUtils) {{$functionName}}(` +
 	
 	queryParts = append(queryParts, "SELECT * FROM ")
 	queryParts = append(queryParts, "{{.DbName}}")
-	queryParts = append(queryParts, "( {{range $i, $e := .Parameters}}{{$e.DbName}} = ${{(plus1 $i)}}{{if ne (plus1 $i) $paramCount}},{{end}}{{end}} )")
+	//queryParts = append(queryParts, "( {{range $i, $e := .Parameters}}{{$e.DbName}} := ${{(plus1 $i)}}{{if ne (plus1 $i) $paramCount}},{{end}}{{end}} )")
+	queryParts = append(queryParts, "( {{range $i, $e := .Parameters}}${{(plus1 $i)}}{{if ne (plus1 $i) $paramCount}},{{end}}{{end}} )")
 	
 	rows, err := currentDbHandle.Query(JoinStringParts(queryParts,""), {{range $i, $e := .Parameters}}param{{.GoFriendlyName}}{{if ne (plus1 $i) $paramCount}},{{end}} {{end}})
 	
-	if err != nil {
-		return {{if not .IsReturnVoid}}returnVal,{{end}} NewModelsError(errorPrefix + " fatal error running the function statement:", err)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-
-	
-	}
-	err = rows.Err()
-	if err != nil {
-		return {{if not .IsReturnVoid}}returnVal,{{end}} NewModelsError(errorPrefix + " error during rows.Next() iterations:", err)
-	}	
-	
+	` + COMMON_CODE_FUNCTION_QUERY + `
 	return {{if not .IsReturnVoid}}returnVal,{{end}} nil
 }
 
