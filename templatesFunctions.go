@@ -24,7 +24,9 @@ var Functions tFunctionUtils
 
 `
 
-const COMMON_CODE_FUNCTION_QUERY = `if err != nil {
+const COMMON_CODE_FUNCTION_QUERY = `rows, err := currentDbHandle.Query(JoinStringParts(queryParts,""), {{range $i, $e := .Parameters}}param{{.GoFriendlyName}}{{if ne (plus1 $i) $paramCount}},{{end}} {{end}})	
+	
+	if err != nil {
 		return {{if not .IsReturnVoid}}returnVal,{{end}} NewModelsError(errorPrefix + " fatal error running the function statement:", err)
 	}
 	defer rows.Close()
@@ -34,10 +36,10 @@ const COMMON_CODE_FUNCTION_QUERY = `if err != nil {
 	return nil
 	{{else}}//BEGIN: non void operations
 
-	// BEGIN: if any nullable fields, create temporary nullable variables to receive null values
+	{{if .IsReturnUserDefined}}// BEGIN: if any nullable fields, create temporary nullable variables to receive null values
 	{{range $i, $e := .Columns}}{{if .Nullable}}var nullable{{$e.GoName}} {{$e.GoNullableType}} 
 	{{end}}{{end}}
-	// END: if any nullable fields, create temporary nullable variables to receive null values
+	// END: if any nullable fields, create temporary nullable variables to receive null values{{end}}
 
 	for rows.Next() {
 
@@ -67,11 +69,8 @@ const COMMON_CODE_FUNCTION_QUERY = `if err != nil {
 		// END: Not-User-defined (internal types) return type collection (slice)			
 	{{end}}
 				
-		{{if .IsReturnASet}}// a set is returned (expect one or more records)
+		// a set is returned (expect one or more records)
 		returnVal = append(returnVal, {{$instanceVarName}})
-		{{else}}// single record (expect at most one record)
-		returnVal = {{if .IsReturnUserDefined}}&{{end}}{{$instanceVarName}}
-		{{end}}		
 
 	}
 	err = rows.Err()
@@ -80,22 +79,69 @@ const COMMON_CODE_FUNCTION_QUERY = `if err != nil {
 	}
 	
 	{{end}} //END: non void operations
+	
+	return {{if not .IsReturnVoid}}returnVal,{{end}} nil
+`
 
-
+const COMMON_CODE_FUNCTION_QUERYROW = `	// we are aiming for a single row so we will use Query Row	
+	
+	{{if .IsReturnUserDefined}}// BEGIN: if any nullable fields, create temporary nullable variables to receive null values
+	{{range $i, $e := .Columns}}{{if .Nullable}}var nullable{{$e.GoName}} {{$e.GoNullableType}} 
+	{{end}}{{end}}
+	// END: if any nullable fields, create temporary nullable variables to receive null values{{end}}	
+	
+	{{if not .IsReturnVoid}}{{if .IsReturnUserDefined}}{{$pointerSymbol := ""}}returnVal = new({{.ReturnGoType}}){{else}}{{$pointerSymbol := "&"}}{{end}}{{end}}
+	
+	err = currentDbHandle.QueryRow(JoinStringParts(queryParts,""), {{range $i, $e := .Parameters}}param{{.GoFriendlyName}}{{if ne (plus1 $i) $paramCount}},{{end}} {{end}})`+
+	`{{if not .IsReturnVoid}}`+
+	`.Scan({{if .IsReturnUserDefined}}{{$colCount := len .Columns}}`+
+				`{{range $i, $e := .Columns}}{{if .Nullable}}&nullable{{$e.GoName}}{{else}}&(returnVal.{{$e.GoName}}){{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}`+
+	  		`{{else}}`+
+				`&returnVal` +
+			`{{end}})`+
+	`{{else}}.Scan(){{end}}	
+			
+    switch {
+    case err == ErrNoRows:
+            // no such row found, return nil and nil
+			err = nil
+			return
+    case err != nil:
+            return
+    default:
+			{{if .IsReturnVoid}}
+			// this function returns void, do not attempt doing anything else
+			return
+			{{else}}//BEGIN: non void operations	
+										
+			{{if not .IsReturnUserDefined}} //todo 
+			{{else}}
+			// BEGIN: assign any nullable values to the nullable fields inside the struct appropriately
+			{{range $i, $e := .Columns}}{{if .Nullable}} returnVal.Set{{.GoName}}(nullable{{$e.GoName}}.GetValue(), nullable{{$e.GoName}}.Valid)
+			{{end}}{{end}}
+			// END: assign any nullable values to the nullable fields inside the struct appropriately	
+			{{end}}
+			
+			return
+			//END: non void operations{{end}}
+    }	
 `
 
 const FUNCTION_TEMPLATE = `{{$paramCount := len .Parameters}}
 {{$functionName := .GoFriendlyName}}
 // Wrapper over the function named {{.DbName}}
+{{if not .IsReturnASet}}{{if not .IsReturnUserDefined}}// For pure Go return types, a true isDbNull return parameter indicates that 
+// the actual value returned from the database was nil, not the default value of the Go type{{end}}{{end}}
 func (utilRef *tFunctionUtils) {{$functionName}}(` +
 	`{{range $i, $e := .Parameters}}param{{.GoFriendlyName}} {{.GoType}}{{if ne (plus1 $i) $paramCount}},{{end}} {{end}})` +
-	` ({{if not .IsReturnVoid}}returnVal {{if .IsReturnASet}}[]{{else}}{{if .IsReturnUserDefined}}*{{end}}{{end}}{{.ReturnGoType}},{{end}} err error) {
+	` ({{if not .IsReturnVoid}}returnVal {{if .IsReturnASet}}[]{{else}}{{if .IsReturnUserDefined}}*{{end}}{{end}}{{.ReturnGoType}},{{end}} err error{{if not .IsReturnVoid}}{{if not .IsReturnASet}}{{if not .IsReturnUserDefined}}, isDbNull bool{{end}}{{end}}{{end}}) {
 						
 	var errorPrefix = "tFunctionUtils.{{$functionName}}() ERROR: "
 	
 	currentDbHandle := GetDb()
 	if currentDbHandle == nil {
-		return {{if not .IsReturnVoid}}returnVal,{{end}} NewModelsErrorLocal(errorPrefix, "the database handle is nil")
+		err = NewModelsErrorLocal(errorPrefix, "the database handle is nil")
+		return
 	}	
 	
 	// define the exec query
@@ -106,10 +152,10 @@ func (utilRef *tFunctionUtils) {{$functionName}}(` +
 	//queryParts = append(queryParts, "( {{range $i, $e := .Parameters}}{{$e.DbName}} := ${{(plus1 $i)}}{{if ne (plus1 $i) $paramCount}},{{end}}{{end}} )")
 	queryParts = append(queryParts, "( {{range $i, $e := .Parameters}}${{(plus1 $i)}}{{if ne (plus1 $i) $paramCount}},{{end}}{{end}} )")
 	
-	rows, err := currentDbHandle.Query(JoinStringParts(queryParts,""), {{range $i, $e := .Parameters}}param{{.GoFriendlyName}}{{if ne (plus1 $i) $paramCount}},{{end}} {{end}})
-	
+	{{if .IsReturnASet}}
 	` + COMMON_CODE_FUNCTION_QUERY + `
-	return {{if not .IsReturnVoid}}returnVal,{{end}} nil
+	{{else}} ` + COMMON_CODE_FUNCTION_QUERYROW + `{{end}}
+		
 }
 
 `
