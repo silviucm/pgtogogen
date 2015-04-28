@@ -97,6 +97,20 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn string, nu
 	return typeReturn, nullableTypeReturn, goTypeToImport
 }
 
+func GetGoTypeNullableType(goType string) string {
+	
+	switch goType {
+		
+		case "bool": return  "pgx.NullBool"
+		case "int32": return  "pgx.NullInt32"
+		case "int64": return  "pgx.NullInt64"
+		case "string": return "pgx.NullString"
+		case "time.Time":  return  "pgx.NullTime"
+	}
+	
+	return ""
+}
+
 func DecodeIsColumnSequence(columnDefaultValue pgx.NullString) bool {
 
 	if columnDefaultValue.Valid == false {

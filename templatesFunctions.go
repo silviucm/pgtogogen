@@ -85,13 +85,19 @@ const COMMON_CODE_FUNCTION_QUERY = `rows, err := currentDbHandle.Query(JoinStrin
 
 const COMMON_CODE_FUNCTION_QUERYROW = `	// we are aiming for a single row so we will use Query Row	
 	
+	/*
 	{{if .IsReturnUserDefined}}// BEGIN: if any nullable fields, create temporary nullable variables to receive null values
 	{{range $i, $e := .Columns}}{{if .Nullable}}var nullable{{$e.GoName}} {{$e.GoNullableType}} 
 	{{end}}{{end}}
 	// END: if any nullable fields, create temporary nullable variables to receive null values{{end}}	
+	*/
+	{{range $i, $e := .Columns}}var nullable{{$e.GoName}} {{getNullableType $e.GoType}} 
+	{{end}}
+	
 	
 	{{if not .IsReturnVoid}}{{if .IsReturnUserDefined}}{{$pointerSymbol := ""}}returnVal = new({{.ReturnGoType}}){{else}}{{$pointerSymbol := "&"}}{{end}}{{end}}
 	
+	/*
 	err = currentDbHandle.QueryRow(JoinStringParts(queryParts,""), {{range $i, $e := .Parameters}}param{{.GoFriendlyName}}{{if ne (plus1 $i) $paramCount}},{{end}} {{end}})`+
 	`{{if not .IsReturnVoid}}`+
 	`.Scan({{if .IsReturnUserDefined}}{{$colCount := len .Columns}}`+
@@ -100,6 +106,16 @@ const COMMON_CODE_FUNCTION_QUERYROW = `	// we are aiming for a single row so we 
 				`&returnVal` +
 			`{{end}})`+
 	`{{else}}.Scan(){{end}}	
+	*/
+	
+	err = currentDbHandle.QueryRow(JoinStringParts(queryParts,""), {{range $i, $e := .Parameters}}param{{.GoFriendlyName}}{{if ne (plus1 $i) $paramCount}},{{end}} {{end}})`+
+	`{{if not .IsReturnVoid}}`+
+	`.Scan({{if .IsReturnUserDefined}}{{$colCount := len .Columns}}`+
+				`{{range $i, $e := .Columns}}&nullable{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}`+
+	  		`{{else}}`+
+				`&returnVal` +
+			`{{end}})`+
+	`{{else}}.Scan(){{end}}		
 			
     switch {
     case err == ErrNoRows:
@@ -117,8 +133,18 @@ const COMMON_CODE_FUNCTION_QUERYROW = `	// we are aiming for a single row so we 
 			{{if not .IsReturnUserDefined}} //todo 
 			{{else}}
 			// BEGIN: assign any nullable values to the nullable fields inside the struct appropriately
+			var isNullRecord bool = true
 			{{range $i, $e := .Columns}}{{if .Nullable}} returnVal.Set{{.GoName}}(nullable{{$e.GoName}}.GetValue(), nullable{{$e.GoName}}.Valid)
+			if  nullable{{$e.GoName}}.Valid { isNullRecord = false }
+			{{else}} returnVal.Set{{.GoName}}(nullable{{$e.GoName}}.GetValue())
 			{{end}}{{end}}
+			
+			if isNullRecord == true {
+				{{if .IsReturnUserDefined}}returnVal = nil
+				{{else}}{{if not .IsReturnVoid}}isDbNull = true{{end}}
+				{{end}}
+			}
+			
 			// END: assign any nullable values to the nullable fields inside the struct appropriately	
 			{{end}}
 			

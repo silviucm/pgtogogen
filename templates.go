@@ -16,6 +16,9 @@ var fns = template.FuncMap{
 	"startsWith": func(source, prefix string) bool {
 		return strings.HasPrefix(strings.ToLower(source), strings.ToLower(prefix))
 	},
+	"getNullableType": func(goType string) string {
+		return GetGoTypeNullableType(goType)
+	},
 }
 
 /* Tables */
