@@ -1,9 +1,10 @@
 package main
 
 import (
-	"github.com/silviucm/pgx"
 	"log"
 	"strings"
+
+	"github.com/silviucm/pgx"
 )
 
 /* Utility methods for dealing with SQL data types in general and PostgreSQL data types in particular */
@@ -42,7 +43,7 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn string, nu
 			nullableTypeReturn = "pgx.NullBool"
 		}
 
-	case "character varying":
+	case "character varying", "text":
 		typeReturn = "string"
 		if nullable {
 			nullableTypeReturn = "pgx.NullString"
@@ -78,7 +79,7 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn string, nu
 			nullableTypeReturn = "pgx.NullString"
 		}
 
-	case "bigint":
+	case "bigint", "bigserial":
 		typeReturn = "int64"
 		if nullable {
 			nullableTypeReturn = "pgx.NullInt64"
@@ -98,16 +99,21 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn string, nu
 }
 
 func GetGoTypeNullableType(goType string) string {
-	
+
 	switch goType {
-		
-		case "bool": return  "pgx.NullBool"
-		case "int32": return  "pgx.NullInt32"
-		case "int64": return  "pgx.NullInt64"
-		case "string": return "pgx.NullString"
-		case "time.Time":  return  "pgx.NullTime"
+
+	case "bool":
+		return "pgx.NullBool"
+	case "int32", "serial":
+		return "pgx.NullInt32"
+	case "int64", "bigserial":
+		return "pgx.NullInt64"
+	case "string":
+		return "pgx.NullString"
+	case "time.Time":
+		return "pgx.NullTime"
 	}
-	
+
 	return ""
 }
 
