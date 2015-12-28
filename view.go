@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/silviucm/pgx"
 	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/silviucm/pgx"
 )
 
 /* View Section */
@@ -121,7 +122,7 @@ func (v *View) CollectMaterializedViewColumns() error {
 
 	var materializedViewsColumnsQuery string = `SELECT attname AS column_name, 
 	null as column_default,
-	false as is_nullable,
+	CAST(NOT(attnotnull) AS varchar(10)) as is_nullable,
 	atttypid::regtype AS data_type, 
 	atttypmod AS character_maximum_length
 FROM   pg_attribute

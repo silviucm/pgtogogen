@@ -132,11 +132,12 @@ func DecodeIsColumnSequence(columnDefaultValue pgx.NullString) bool {
 
 func DecodeNullable(isNullable string) bool {
 
-	if isNullable == "NO" {
+	if isNullable == "NO" || isNullable == "f" || isNullable == "F" {
 		return false
 	}
 
-	if isNullable == "YES" || isNullable == "Yes" || isNullable == "yes" || isNullable == "y" || isNullable == "Y" {
+	if isNullable == "YES" || isNullable == "Yes" || isNullable == "yes" || isNullable == "y" || isNullable == "Y" ||
+		isNullable == "t" || isNullable == "T" || isNullable == "true" || isNullable == "TRUE" || isNullable == "True" {
 		return true
 	}
 
