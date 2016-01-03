@@ -11,7 +11,7 @@ import (
 const ARGS_ERROR_HEADER string = "\n-------------------------\nARGUMENTS ERROR:\n-------------------------\n"
 
 var dbHost, dbPort, dbName, dbUser, dbPass, dbSchema, outputFolder, packageName *string
-var generatePKGetters, generateGuidGetters *bool
+var generatePKGetters, generateUQGetters, generateGuidGetters *bool
 
 var dbPortUInt16 uint16 = 5432
 
@@ -34,7 +34,8 @@ func main() {
 	packageName = flag.String("pkg", "models", "the package name for the generated files")
 
 	// output settings
-	generatePKGetters = flag.Bool("pk", true, "generate pk select methods, defaults to true")
+	generatePKGetters = flag.Bool("pk", true, "generate pk get methods, defaults to true")
+	generateUQGetters = flag.Bool("uq", true, "generate unique constraints get methods, defaults to true")
 	generateGuidGetters = flag.Bool("guid", true, "generate guid columns select methods, defaults to true")
 
 	flag.Parse()
@@ -57,6 +58,7 @@ func main() {
 		PackageName:  *packageName,
 
 		GeneratePKGetters:   *generatePKGetters,
+		GenerateUQGetters:   *generateUQGetters,
 		GenerateGuidGetters: *generateGuidGetters}
 
 	// initialize the database and acquire the database handle

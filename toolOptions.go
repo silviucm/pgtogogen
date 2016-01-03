@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/silviucm/pgx"
 	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/silviucm/pgx"
 )
 
 type ToolOptions struct {
@@ -24,6 +25,7 @@ type ToolOptions struct {
 	PackageName string
 
 	GeneratePKGetters   bool
+	GenerateUQGetters   bool
 	GenerateGuidGetters bool
 
 	ConnectionPool *pgx.ConnPool
@@ -171,6 +173,32 @@ func (t *ToolOptions) Generate() {
 						pkGetterTx := t.Tables[i].PKColumns[0].GeneratePKGetterTx(&t.Tables[i])
 						if _, writeErrTx := t.Tables[i].GeneratedTemplate.Write(pkGetterTx); writeErrTx != nil {
 							log.Fatal("Generate fatal error writing bytes from the GeneratePKGetterTx call: ", writeErrTx)
+						}
+
+					}
+
+				}
+			}
+
+			// if the unique constraints getters generate flag is true, then
+			// generate those as well
+			if t.GenerateUQGetters == true {
+				fmt.Println("Generating Unique Constraints Accessor Methods...")
+
+				if t.Tables[i].UniqueConstraints != nil && len(t.Tables[i].UniqueConstraints) > 0 {
+
+					for cIdx, _ := range t.Tables[i].UniqueConstraints {
+
+						// non-transactional getter
+						uqGetter := t.Tables[i].UniqueConstraints[cIdx].GenerateUniqueConstraintGetter(&t.Tables[i])
+						if _, writeErr := t.Tables[i].GeneratedTemplate.Write(uqGetter); writeErr != nil {
+							log.Fatal("Generate fatal error writing bytes from the GenerateUniqueConstraintGetter call: ", writeErr)
+						}
+
+						// transactional getter
+						uqGetterTx := t.Tables[i].UniqueConstraints[cIdx].GenerateUniqueConstraintGetterTx(&t.Tables[i])
+						if _, writeErrTx := t.Tables[i].GeneratedTemplate.Write(uqGetterTx); writeErrTx != nil {
+							log.Fatal("Generate fatal error writing bytes from the GenerateUniqueConstraintGetterTx call: ", writeErrTx)
 						}
 
 					}
