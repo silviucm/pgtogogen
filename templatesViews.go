@@ -66,6 +66,29 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}()  error {
 	return  nil	
 	
 }
+
+{{$functionNameConc := "RefreshMaterializedViewConcurrently"}}{{$sourceStructName := print "source" .GoFriendlyName}}
+// Refreshes the materialized view concurrently, and updates it with the latest data from 
+// the underlying data entities. A concurrent refresh means that the view is accessible to reading
+// by other threads, but it may take longer than the non-concurrent operation. 
+// This refresh mode is only available in Postgres versions 9.4 and higher.
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionNameConc}}()  error {
+						
+	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionNameConc}}() ERROR: "
+	
+	currentDbHandle := GetDb()
+	if currentDbHandle == nil {
+		return NewModelsErrorLocal(errorPrefix, "the database handle is nil")
+	}
+	
+	_, err := currentDbHandle.Exec("REFRESH MATERIALIZED VIEW CONCURRENTLY {{.DbName}};")
+	if err != nil {
+		return NewModelsError(errorPrefix + "currentDbHandle.Exec error:",err)
+	}
+	
+	return  nil	
+	
+}
 {{end}}
 `
 
