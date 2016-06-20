@@ -63,8 +63,8 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() (int64,  error) {
 
 const CONST_SELECT_TEMPLATE_SINGLE = `{{$colCount := len .Columns}}
 // Returns the a single record from {{.DbName}} based on the specified condition.
-// If no record is found, nil is returned. If more than one record is found, an 
-// If an error occures, the function returns nil and the error.
+// If no record is found, nil is returned. If an error occures, the function returns nil and the error.
+// In case more than one record is found, an ErrTooManyRows error is thrown.
 func {{if eq $utilOrTransactionDbHandle "currentDbHandle"}}(utilRef *t{{.GoFriendlyName}}Utils){{else}}(txWrapper *Transaction){{end}}` +
 	` {{$functionName}}(condition string, params ...interface{}) (*{{.GoFriendlyName}},  error) {
 						
