@@ -46,14 +46,10 @@ const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.DbName}}"
 
 {{if ne .DbComments ""}}/* {{.DbComments}} */{{end}}
 type {{.GoFriendlyName}} struct {
-	{{range .Columns}}// database field name: {{.DbName}}
-	{{if ne .DbComments ""}}/* {{.DbComments}} */		
-	{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
+	{{range .Columns}}
+	{{if ne .DbComments ""}}/* {{.DbComments}} */{{end}}
+	{{.GoName}} {{.GoType}} // database field name: {{.DbName}}, IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
 	{{if .Nullable}}{{.GoName}}_IsNotNull bool // if true, it means the corresponding field does not currently carry a null value{{end}}
-
-	{{else}}{{.GoName}} {{.GoType}} // IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}{{end}}
-	{{if .Nullable}}{{.GoName}}_IsNotNull bool // if true, it means the corresponding field does not currently carry a null value
-	{{end}}
 	{{end}}	
 	
 	// Set this to true if you want Inserts to ignore the PK fields	
