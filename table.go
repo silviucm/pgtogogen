@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/silviucm/pgx"
 	"io/ioutil"
 	"log"
 	"strconv"
 	"strings"
 	"text/template"
+
+	"github.com/silviucm/pgx"
 )
 
 /* Table Section */
@@ -57,8 +58,9 @@ func (tbl *Table) CollectColumns() error {
 	var currentColumnName, isNullable, dataType string
 	var columnDefault pgx.NullString
 	var charMaxLength pgx.NullInt32
+	var ordinalPosition int
 
-	rows, err := tbl.ConnectionPool.Query("SELECT column_name, column_default, is_nullable, data_type, character_maximum_length FROM information_schema.columns "+
+	rows, err := tbl.ConnectionPool.Query("SELECT column_name, column_default, is_nullable, data_type, character_maximum_length, ordinal_position FROM information_schema.columns "+
 		" WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position;", tbl.DbName)
 
 	if err != nil {
@@ -67,7 +69,7 @@ func (tbl *Table) CollectColumns() error {
 	defer rows.Close()
 
 	for rows.Next() {
-		err := rows.Scan(&currentColumnName, &columnDefault, &isNullable, &dataType, &charMaxLength)
+		err := rows.Scan(&currentColumnName, &columnDefault, &isNullable, &dataType, &charMaxLength, &ordinalPosition)
 		if err != nil {
 			log.Fatal("CollectColumns() fatal error inside rows.Next() iteration: ", err)
 		}
@@ -85,12 +87,13 @@ func (tbl *Table) CollectColumns() error {
 
 		// instantiate a column struct
 		currentColumn := &Column{
-			DbName:       currentColumnName,
-			Type:         dataType,
-			DefaultValue: columnDefault,
-			Nullable:     nullable,
-			MaxLength:    DecodeMaxLength(charMaxLength),
-			IsSequence:   DecodeIsColumnSequence(columnDefault),
+			DbName:          currentColumnName,
+			OrdinalPosition: ordinalPosition,
+			Type:            dataType,
+			DefaultValue:    columnDefault,
+			Nullable:        nullable,
+			MaxLength:       DecodeMaxLength(charMaxLength),
+			IsSequence:      DecodeIsColumnSequence(columnDefault),
 
 			IsCompositePK: false, IsPK: false, IsFK: false,
 
@@ -381,8 +384,6 @@ func (tbl *Table) CollectComments() error {
 	}
 	defer rows.Close()
 
-	var counter int = 0
-
 	for rows.Next() {
 		err := rows.Scan(&currentComment, &currentObjsubid)
 		if err != nil {
@@ -396,8 +397,14 @@ func (tbl *Table) CollectComments() error {
 			if tbl.Columns != nil {
 				if len(tbl.Columns) > 0 {
 
-					tbl.Columns[counter].DbComments = currentComment
-					counter = counter + 1
+					for i := range tbl.Columns {
+						if tbl.Columns[i].OrdinalPosition == int(currentObjsubid) {
+							// assign the comment based on the column ordinal position which
+							// is the same as the
+							tbl.Columns[i].DbComments = currentComment
+						}
+					}
+
 				}
 			}
 		}

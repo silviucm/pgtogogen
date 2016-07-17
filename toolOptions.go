@@ -449,11 +449,9 @@ func (t *ToolOptions) CollectTables() error {
 		currentTable.CreateGenericQueries()
 
 		// collect the comments for the table and the columns
-		/* BUGS if constraint comments are inserted - to find how to tie comments to fields specifically
 		if err = currentTable.CollectComments(); err != nil {
 			log.Fatal("CollectTables(): CollectComments method for table ", currentTable.DbName, " FATAL error: ", err)
 		}
-		*/
 
 		// add the table to the slice
 		t.Tables = append(t.Tables, *currentTable)

@@ -3,9 +3,10 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/silviucm/pgx"
 	"log"
 	"text/template"
+
+	"github.com/silviucm/pgx"
 )
 
 /* Column Section */
@@ -15,13 +16,14 @@ type Column struct {
 	ConnectionPool *pgx.ConnPool
 	ParentTable    *Table
 
-	DbName       string
-	DbComments   string
-	Type         string
-	MaxLength    int
-	DefaultValue pgx.NullString
-	Nullable     bool
-	IsSequence   bool
+	DbName          string
+	DbComments      string
+	OrdinalPosition int
+	Type            string
+	MaxLength       int
+	DefaultValue    pgx.NullString
+	Nullable        bool
+	IsSequence      bool
 
 	IsPK          bool
 	IsCompositePK bool
