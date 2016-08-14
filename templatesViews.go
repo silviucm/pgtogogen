@@ -31,6 +31,16 @@ type {{.GoFriendlyName}} struct {
 }
 
 {{ $tableGoName := .GoFriendlyName}}
+/* Sorting helper containers */
+{{range $i, $e := .Columns}}
+// By{{$e.GoName}} implements sort.Interface for []{{$tableGoName}} based on
+// the {{$e.GoName}} field. Usage: sort.Sort(Sort{{$tableGoName}}By{{$e.GoName}}(anyGiven{{$tableGoName}}Slice))
+type Sort{{$tableGoName}}By{{$e.GoName}} []{{$tableGoName}}
+
+func (a Sort{{$tableGoName}}By{{$e.GoName}}) Len() int           { return len(a) }
+func (a Sort{{$tableGoName}}By{{$e.GoName}}) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a Sort{{$tableGoName}}By{{$e.GoName}}) Less(i, j int) bool { return LessComparatorFor_{{$e.GoType}}(a[i].{{$e.GoName}},a[j].{{$e.GoName}}) }
+{{end}}
 {{range .Columns}}func (t *{{$tableGoName}}) Set{{.GoName}}(val {{.GoType}} {{if .Nullable}}, notNull bool{{end}}) {
 	t.{{.GoName}} = val
 	{{if .Nullable}}t.{{.GoName}}_IsNotNull = notNull{{end}}
