@@ -1,8 +1,21 @@
 # pgtogogen
-Postgres to Go structures generator
+Pgtogogen is a Postgres entities to Go structures generator with the low-level db connectivity details handled by Jack Christensen's pgx project  (https://github.com/jackc/pgx).
+The project was started in late 2014, committed to GitHub in early 2015, and I've kept adding features sporadically even since.
 
 ### Status: In Progress
-Currently not functional
+The project is partially functional. As is the case with most GitHub project, use it at your own risk. 
+
+### Installation
+To install the tool, run:
+	go get github.com/silviucm/pgtogogen
+	
+### Generating the model package	
+Assuming an empty subdirectory named "models" exists in the location where you will run the command:
+	pgtogogen -h=localhost -n=mydatabasename -u=mydatabaseuser -pass=mydatabasepassword
+
+### Usage
+TODO
+	
 
 ### License
 The MIT License (MIT)
