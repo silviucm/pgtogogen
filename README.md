@@ -7,11 +7,11 @@ The project is partially functional. As is the case with most GitHub project, us
 
 ### Installation
 To install the tool, run:
-	go get github.com/silviucm/pgtogogen
+ go get github.com/silviucm/pgtogogen
 	
 ### Generating the model package	
 Assuming an empty subdirectory named "models" exists in the location where you will run the command:
-	pgtogogen -h=localhost -n=mydatabasename -u=mydatabaseuser -pass=mydatabasepassword
+ pgtogogen -h=localhost -n=mydatabasename -u=mydatabaseuser -pass=mydatabasepassword
 
 ### Usage
 TODO
