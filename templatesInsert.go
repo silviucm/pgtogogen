@@ -52,15 +52,15 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 	}
 
 	// define the values to be passed, from the structure
-	var  {{.ColumnsString}} = {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
+	var  {{.ColumnsStringGoSafe}} = {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
 	
 	// this will print only if debug mode enabled
 	Debug("Insert Query:", query)
 	
 	if {{$sourceStructName}}.PgToGo_IgnorePKValuesWhenInsertingAndUseSequence {
-		err = currentDbHandle.QueryRow(query, {{.ColumnsStringNoPK}}).Scan({{range $i, $e := .PKColumns}}&param{{.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}})		
+		err = currentDbHandle.QueryRow(query, {{.ColumnsStringNoPKGoSafe}}).Scan({{range $i, $e := .PKColumns}}&param{{.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}})		
 	} else {
-		err = currentDbHandle.QueryRow(query, {{.ColumnsString}}).Scan({{range $i, $e := .PKColumns}}&param{{.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}})
+		err = currentDbHandle.QueryRow(query, {{.ColumnsStringGoSafe}}).Scan({{range $i, $e := .PKColumns}}&param{{.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}})
 	}
 		
     switch {
@@ -141,15 +141,15 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 	}
 
 	// define the values to be passed, from the structure
-	var  {{.ColumnsString}} = {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
+	var  {{.ColumnsStringGoSafe}} = {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
 	
 	// this will print only if debug mode enabled
 	Debug("Insert Query:", query)
 	
 	if {{$sourceStructName}}.PgToGo_IgnorePKValuesWhenInsertingAndUseSequence {
-		err = txWrapper.Tx.QueryRow(query, {{.ColumnsStringNoPK}}).Scan({{range $i, $e := .PKColumns}}&param{{.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}})		
+		err = txWrapper.Tx.QueryRow(query, {{.ColumnsStringNoPKGoSafe}}).Scan({{range $i, $e := .PKColumns}}&param{{.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}})		
 	} else {
-		err = txWrapper.Tx.QueryRow(query, {{.ColumnsString}}).Scan({{range $i, $e := .PKColumns}}&param{{.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}})
+		err = txWrapper.Tx.QueryRow(query, {{.ColumnsStringGoSafe}}).Scan({{range $i, $e := .PKColumns}}&param{{.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}})
 	}
 		
     switch {

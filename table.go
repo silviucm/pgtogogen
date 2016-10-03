@@ -22,6 +22,11 @@ type Table struct {
 	ColumnsString     string
 	ColumnsStringNoPK string
 
+	// Go-safe column sequence, prefixed by the underscore character. For example, the column "type" would fail in Go, because "type" is
+	// a reserved keyword. Appending an underscore solves this problem.
+	ColumnsStringGoSafe     string
+	ColumnsStringNoPKGoSafe string
+
 	PKColumns       []Column
 	PKColumnsString string
 
@@ -116,7 +121,8 @@ func (tbl *Table) CollectColumns() error {
 
 	if tbl.Columns != nil {
 		// get all columns and all params string friendly
-		tbl.ColumnsString = tbl.getSqlFriendlyColumnList(false)
+		tbl.ColumnsString = tbl.getSqlFriendlyColumnList(false, false)
+		tbl.ColumnsStringGoSafe = tbl.getSqlFriendlyColumnList(false, true)
 		tbl.ParamString = tbl.getSqlFriendlyParameters(false)
 	}
 
@@ -215,8 +221,10 @@ func (tbl *Table) CollectPrimaryKeys() error {
 	}
 
 	// let's generate the PK-dependent strings properly
-	tbl.ColumnsString = tbl.getSqlFriendlyColumnList(false)
-	tbl.ColumnsStringNoPK = tbl.getSqlFriendlyColumnList(true)
+	tbl.ColumnsString = tbl.getSqlFriendlyColumnList(false, false)
+	tbl.ColumnsStringGoSafe = tbl.getSqlFriendlyColumnList(false, true)
+	tbl.ColumnsStringNoPK = tbl.getSqlFriendlyColumnList(true, false)
+	tbl.ColumnsStringNoPKGoSafe = tbl.getSqlFriendlyColumnList(true, true)
 
 	return nil
 
@@ -443,7 +451,8 @@ func (tbl *Table) CreateGenericQueries() {
 
 		// the column names, comma-separated
 		var ignoreSerialColumns bool = false
-		_, writeErr = genericSelectQueryBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns))
+		var appendUnderscorePrefix bool = false
+		_, writeErr = genericSelectQueryBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns, appendUnderscorePrefix))
 		if writeErr != nil {
 			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names for table (select) ", tbl.DbName, ": ", writeErr)
 		}
@@ -475,13 +484,14 @@ func (tbl *Table) CreateGenericQueries() {
 
 		// the column names, comma-separated
 		var ignoreSerialColumns bool = true
-		_, writeErr = genericInsertQueryNonPKColumnsBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns))
+		var appendUnderscorePrefix bool = false
+		_, writeErr = genericInsertQueryNonPKColumnsBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns, appendUnderscorePrefix))
 		if writeErr != nil {
 			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names (without pk) for table (insert) ", tbl.DbName, ": ", writeErr)
 		}
 
 		ignoreSerialColumns = false
-		_, writeErr = genericInsertQueryAllColumnsBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns))
+		_, writeErr = genericInsertQueryAllColumnsBuffer.WriteString(tbl.getSqlFriendlyColumnList(ignoreSerialColumns, appendUnderscorePrefix))
 		if writeErr != nil {
 			log.Fatal("CollectTables(): FATAL error writing to buffer when generating the column names (with pk) for table (insert) ", tbl.DbName, ": ", writeErr)
 		}
@@ -512,7 +522,12 @@ func (tbl *Table) CreateGenericQueries() {
 // or INSERT sql statements (e.g. "username, first_name, last_name")
 // if ignoreSequenceColumns is true, it checks which columns are auto-generated via
 // sequences and does not include those.
-func (tbl *Table) getSqlFriendlyColumnList(ignoreSequenceColumns bool) string {
+func (tbl *Table) getSqlFriendlyColumnList(ignoreSequenceColumns bool, appendUnderscorePrefix bool) string {
+
+	var underscorePrefix string = "_"
+	if appendUnderscorePrefix == false {
+		underscorePrefix = ""
+	}
 
 	genericQueryFriendlyColumnsBuffer := bytes.Buffer{}
 
@@ -526,9 +541,9 @@ func (tbl *Table) getSqlFriendlyColumnList(ignoreSequenceColumns bool) string {
 		}
 
 		if totalNumberOfColumns == colRange {
-			colNameToWriteToBuffer = tbl.Columns[colRange].DbName
+			colNameToWriteToBuffer = underscorePrefix + tbl.Columns[colRange].DbName
 		} else {
-			colNameToWriteToBuffer = tbl.Columns[colRange].DbName + ", "
+			colNameToWriteToBuffer = underscorePrefix + tbl.Columns[colRange].DbName + ", "
 		}
 
 		_, writeErr := genericQueryFriendlyColumnsBuffer.WriteString(colNameToWriteToBuffer)
