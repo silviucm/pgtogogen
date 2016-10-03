@@ -20,6 +20,9 @@ type ToolOptions struct {
 	DbPass   string
 	DbSchema string
 
+	DbMajorVersion int
+	DbMinorVersion int
+
 	OutputFolder string
 
 	PackageName string
@@ -61,9 +64,14 @@ func (t *ToolOptions) InitDatabase() (*pgx.ConnPool, error) {
 		log.Println("Connecting to database ", t.DbName, " as user ", t.DbUser, ": ", successOrFailure)
 	}
 
-	fmt.Println("--------------------------------------------------------------------------------------------")
-
 	t.ConnectionPool = connPool
+
+	// get the database version
+	majorVersion, minorVersion := t.GetPostgresVersion()
+	t.DbMajorVersion = majorVersion
+	t.DbMinorVersion = minorVersion
+	log.Println("Database version: ", t.DbMajorVersion, ".", t.DbMinorVersion)
+	fmt.Println("--------------------------------------------------------------------------------------------")
 
 	return t.ConnectionPool, err
 
@@ -117,10 +125,15 @@ func (t *ToolOptions) Collect() {
 	}
 
 	// collect all the user functions from the database
-	fmt.Print("Collecting functions...")
-	if err := t.CollectFunctions(); err != nil {
-		log.Fatal("Collect(): CollectFunctions fatal error: ", err)
+	if t.DbMajorVersion <= 9 && t.DbMinorVersion < 4 {
+		fmt.Print("SKIPPING Collecting functions because Postgres versions before 9.4 do not suport parameter_default inside the informaion schema parameters view.\nFor more details see:\nhttps://www.postgresql.org/docs/9.5/static/infoschema-parameters.html\n")
+	} else {
+		fmt.Print("Collecting functions...")
+		if err := t.CollectFunctions(); err != nil {
+			log.Fatal("Collect(): CollectFunctions fatal error: ", err)
+		}
 	}
+
 }
 
 func (t *ToolOptions) Generate() {
@@ -658,7 +671,7 @@ func (t *ToolOptions) CollectFunctions() error {
 	rows, err := t.ConnectionPool.Query(functionNamesQuery, t.DbSchema, t.DbName)
 
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("CollectFunctions fatal error when executing t.ConnectionPool.Query: ", err)
 	}
 	defer rows.Close()
 
@@ -690,6 +703,59 @@ func (t *ToolOptions) CollectFunctions() error {
 }
 
 /* Util methods */
+
+// Retrieves the current PostgreSQL version
+// For "SELECT version();"  the returned string should look something like: "PostgreSQL 9.3.6, compiled by Visual C++ build 1600, 64-bit"
+// For "SHOW server_version;", the result should be something like: "9.3.6"
+func (t *ToolOptions) GetPostgresVersion() (majorVersion int, minorVersion int) {
+
+	minorVersion = -1
+	majorVersion = -1
+	var err error
+	var minorVersionInt64, majorVersionInt64 int64
+
+	var pgVersion string
+
+	var selectVersionQuery string = "SHOW server_version;"
+
+	versionRow := t.ConnectionPool.QueryRow(selectVersionQuery)
+
+	// For "SELECT version();"  the returned string should look something like: "PostgreSQL 9.3.6, compiled by Visual C++ build 1600, 64-bit"
+	// For "SHOW server_version", the result should be something like: "9.3.6"
+	if versionRow != nil {
+		scanErr := versionRow.Scan(&pgVersion)
+		if scanErr != nil {
+			log.Fatal("GetPostgresVersion() fatal error at versionRow.Scan: ", scanErr)
+			return
+		}
+		// try to split based on dots
+		versions := strings.Split(pgVersion, ".")
+		if (len(versions)) == 0 {
+			return
+		}
+		if len(versions) > 0 {
+			majorVersionInt64, err = strconv.ParseInt(versions[0], 10, 64)
+			if err != nil {
+				log.Fatal("GetPostgresVersion() error parsing major version: ", err)
+			}
+		}
+		if len(versions) > 1 {
+			minorVersionInt64, err = strconv.ParseInt(versions[1], 10, 64)
+			if err != nil {
+				log.Fatal("GetPostgresVersion() error parsing minor version: ", err)
+			}
+		}
+
+		minorVersion = int(minorVersionInt64)
+		majorVersion = int(majorVersionInt64)
+		return
+
+	} else {
+		log.Fatal("GetPostgresVersion fatal error: returned row supposed to contain the version number is nil")
+	}
+
+	return
+}
 
 func GetGoFriendlyNameForTable(tableName string) string {
 
