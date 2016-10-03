@@ -24,7 +24,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 		return 0, NewModelsErrorLocal(errorPrefix, "the database handle is nil")
 	}
 
-	// define the delete query
+	// define the update query
 	queryBuffer := bytes.Buffer{}
 	_, writeErr := queryBuffer.WriteString("UPDATE {{.DbName}} SET {{range $i, $e := .Columns}}{{$e.DbName}} = ${{(plus1 $i)}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} WHERE ")
 	if writeErr != nil {
@@ -36,7 +36,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 		return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString (condition param) error:",writeErr)
 	}	
 	
-	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} }
+	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} }
 	
 	allParams := append(instanceValuesSlice, params...)	
 	
@@ -77,7 +77,7 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 	if txWrapper == nil { return 0, NewModelsErrorLocal(errorPrefix, "the transaction wrapper is nil") }
 	if txWrapper.Tx == nil { return 0, NewModelsErrorLocal(errorPrefix, "the transaction object is nil") }
 
-	// define the delete query
+	// define the update query
 	queryBuffer := bytes.Buffer{}
 	_, writeErr := queryBuffer.WriteString("UPDATE {{.DbName}} SET {{range $i, $e := .Columns}}{{$e.DbName}} = ${{(plus1 $i)}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} WHERE ")
 	if writeErr != nil {
@@ -89,7 +89,7 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 		return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString (condition param) error:",writeErr)
 	}	
 	
-	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} }
+	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} }
 	
 	allParams := append(instanceValuesSlice, params...)
 	
@@ -138,7 +138,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 		return 0, NewModelsErrorLocal(errorPrefix, "the database handle is nil")
 	}
 
-	// define the delete query
+	// define the update query
 	queryBuffer := bytes.Buffer{}
 	_, writeErr := queryBuffer.WriteString("UPDATE {{.DbName}} SET ")
 	if writeErr != nil {
@@ -233,7 +233,7 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 	if txWrapper.Tx == nil { return 0, NewModelsErrorLocal(errorPrefix, "the transaction object is nil") }
 
 
-	// define the delete query
+	// define the update query
 	queryBuffer := bytes.Buffer{}
 	_, writeErr := queryBuffer.WriteString("UPDATE {{.DbName}} SET ")
 	if writeErr != nil {
@@ -317,7 +317,7 @@ func ({{$sourceStructName}} *{{.GoFriendlyName}}) {{$functionName}}() error {
 		return NewModelsErrorLocal(errorPrefix, "the database handle is nil")
 	}
 
-	// define the delete query
+	// define the update query
 	queryBuffer := bytes.Buffer{}
 	_, writeErr := queryBuffer.WriteString("UPDATE {{.DbName}} SET {{range $i, $e := .Columns}}{{$e.DbName}} = ${{(plus1 $i)}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} WHERE ")
 	if writeErr != nil {
@@ -329,7 +329,7 @@ func ({{$sourceStructName}} *{{.GoFriendlyName}}) {{$functionName}}() error {
 		return NewModelsError(errorPrefix + "queryBuffer.WriteString (instance condition param) error:",writeErr)
 	}	
 	
-	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}  }
+	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}  }
 	
 	r, err := currentDbHandle.Exec(queryBuffer.String(), instanceValuesSlice...)
 	if err != nil {
@@ -366,7 +366,7 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 	if txWrapper.Tx == nil { return NewModelsErrorLocal(errorPrefix, "the transaction object is nil") }
 
 
-	// define the delete query
+	// define the update query
 	queryBuffer := bytes.Buffer{}
 	_, writeErr := queryBuffer.WriteString("UPDATE {{.DbName}} SET {{range $i, $e := .Columns}}{{$e.DbName}} = ${{(plus1 $i)}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} WHERE ")
 	if writeErr != nil {
@@ -378,7 +378,7 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 		return NewModelsError(errorPrefix + "queryBuffer.WriteString (instance condition param) error:",writeErr)
 	}	
 	
-	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}  }
+	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}  }
 	
 	r, err := txWrapper.Tx.Exec(queryBuffer.String(), instanceValuesSlice...)
 	if err != nil {

@@ -25,7 +25,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 	{{range .PKColumns}}var param{{.GoName}} {{.GoType}}
 	{{end}}
 
-	// define the select query
+	// define the insert query
 	var insertQueryAllColumns = "{{.GenericInsertQuery}} RETURNING {{.PKColumnsString}}";
 	var insertQueryNoPKColumns = "{{.GenericInsertQueryNoPK}} RETURNING {{.PKColumnsString}}";
 	
