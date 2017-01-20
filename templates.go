@@ -98,7 +98,7 @@ type t{{.GoFriendlyName}}Utils struct {
 {{end}}{{end}}
 
 {{$colCount := len .Columns}}{{$functionName := "New"}}
-// Creates a new pointer to a blank KiriUser structure.
+// Creates a new pointer to a blank {{.GoFriendlyName}} structure.
 // Some of the fields, such as the time.Time ones, might be already set to time.Now()
 // based on the Tables.PgToGo_SetDateTimeFieldsToNowForNewRecords setting
 func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() *{{.GoFriendlyName}} {
@@ -112,7 +112,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}() *{{.GoFriendlyName
 }
 
 {{$colCount := len .Columns}}{{$functionName := "CreateFromHttpRequest"}}
-// Creates a new pointer to a KiriUser from an Http Request.
+// Creates a new pointer to a {{.GoFriendlyName}} from an Http Request.
 // The parameters are expected to match the struct field names
 func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) (*{{.GoFriendlyName}}, error) {
 	
@@ -139,7 +139,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) (
 }
 
 {{$colCount := len .Columns}}{{$functionName := "CreateFromHttpRequestIgnoreErrors"}}
-// Creates a new pointer to a KiriUser from an Http Request.
+// Creates a new pointer to a {{.GoFriendlyName}} from an Http Request.
 // The parameters are expected to match the struct field names
 // Unlike CreateFromHttpRequest, this method completely does not exit when encountering parsing errors, 
 // but accumulates them into an []error slice. Futher Validation is needed.
