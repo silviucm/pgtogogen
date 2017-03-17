@@ -1,13 +1,16 @@
 # pgtogogen
 Pgtogogen is a Postgres-entities-to-Go structures generator with the low-level db connectivity details handled by Jack Christensen's pgx project  (https://github.com/jackc/pgx).
-The project was started in late 2014, committed to GitHub in early 2015, and I've kept adding features sporadically even since.
+The project was started in late 2014, committed to GitHub in early 2015, and I've kept adding features sporadically ever since.
 
 ### Status: In Progress
 The project is partially functional. As is the case with most GitHub projects, use it at your own risk. 
 
 ### Installation
+I am keeping a fork of pgx that I regularly synchronize with the upstream master.
+
 To install the tool, run:
 ```bash
+ go get -u github.com/silviucm/utils
  go get -u github.com/silviucm/pgx
  go get -u github.com/silviucm/pgtogogen
 ```
