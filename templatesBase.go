@@ -27,6 +27,22 @@ type Transaction struct {
 	Tx *pgx.Tx
 }
 
+// Commits the current transaction
+func (t *Transaction) Commit() error {
+	if t.Tx == nil {
+		return NewModelsErrorLocal("Transaction.Commit()", "The inner Tx transaction is nil")
+	}
+	return t.Tx.Commit()
+}
+
+// Attempts to rollback the current transaction
+func (t *Transaction) Rollback() error {
+	if t.Tx == nil {
+		return NewModelsErrorLocal("Transaction.Rollback()", "The inner Tx transaction is nil")
+	}
+	return t.Tx.Rollback()
+}
+
 // Interface to allow cache provider other than the default, in-memory cache
 type ICacheProvider interface {
 	Get(key string) (interface{}, error)
