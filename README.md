@@ -37,6 +37,7 @@ Initialize the database (do it in the main init() function or as soon as possibl
 	}
 ```
 For a comprehensive usage article, see: 
+
 [https://www.cmscomputing.com/articles/programming/generate-go-entities-from-postgres-tables-views](https://www.cmscomputing.com/articles/programming/generate-go-entities-from-postgres-tables-views)
 
 ### License
