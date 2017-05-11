@@ -291,32 +291,115 @@ func TxWrap(wrapperFunc func(tx *Transaction, args ...interface{}) (interface{},
 
 /* END Transactions utility functions */
 
+
 /* BEGIN Error and Logging utility functions */
 
-// Wraps an already existing error with a localized prefix
+// NewModelsError wraps an already existing error with a localized prefix.
+// If the error is of type pgx.PgError then its Code field value is automatically
+// transferred to the wrapper error.
 func NewModelsError(errorPrefix string, originalError error) error {
-	return errors.New(errorPrefix + ": " + originalError.Error())
+
+	if pgErr, ok := originalError.(pgx.PgError); ok {
+		return &pgToGoGenError{
+			Err:           errorPrefix + ": " + originalError.Error(),
+			OriginalError: originalError,
+			Code:          pgErr.Code,
+		}
+	}
+	return &pgToGoGenError{
+		Err:           errorPrefix + ": " + originalError.Error(),
+		OriginalError: originalError,
+	}
 }
 
-// Wraps local issues in an error format, without needing an already existing error
+// NewModelsErrorWithCode wraps an already existing error with a localized prefix.
+// A code can be specified, which could be the code of the original error.
+func NewModelsErrorWithCode(errorPrefix string, originalError error, code string) error {
+	return &pgToGoGenError{
+		Err:           errorPrefix + ": " + originalError.Error(),
+		OriginalError: originalError,
+		Code:          code,
+	}
+}
+
+// NewModelsErrorLocal wraps locally occuring errors in a standardized error format,
+// without the needing of an already existing error.
 func NewModelsErrorLocal(errorPrefix string, localError string) error {
-	return errors.New(errorPrefix + ": " + localError)
+	return &pgToGoGenError{
+		Err:           errorPrefix + ": " + localError,
+		OriginalError: nil,
+	}
 }
 
-// Logs the message to the console 
+// NewModelsErrorLocalWithCode wraps locally occuring errors in a standardized error format,
+// along with an established code, without the needing of an already existing error.
+func NewModelsErrorLocalWithCode(errorPrefix string, localError string, code string) error {
+	return &pgToGoGenError{
+		Err:           errorPrefix + ": " + localError,
+		OriginalError: nil,
+		Code:          code,
+	}
+}
+
+// GetOriginalError attempts to retrieve the original, embedded error if there is one
+// in the wrapper error. It returns an error or nil if no original error found.
+func GetOriginalError(err error) error {
+	if pgtgErr, ok := err.(*pgToGoGenError); ok {
+		if pgtgErr.OriginalError != nil {
+			return pgtgErr.OriginalError
+		}
+	}
+	return nil
+}
+
+// GetPostgresErrorCode attempts to retrieve the Postgres error code as defined at:
+// https://www.postgresql.org/docs/current/static/errcodes-appendix.html
+// To obtain the code it attempts to detect if the supplied error is either
+// a locally defined *pgToGoGenError or a pgx-defined pgx.PgError.
+// The latter has priority.
+// It returns the code or empty string if it cannot find it.
+func GetPostgresErrorCode(err error) string {
+	// Assume an error wrapper first
+	if pgtgErr, ok := err.(*pgToGoGenError); ok {
+		if pgtgErr.OriginalError != nil {
+			if pgErr, ok := err.(pgx.PgError); ok {
+				return pgErr.Code
+			}
+		}
+		return pgtgErr.Code
+	}
+	// Attempt a type assertion to pgx.PgError directly
+	if pgErr, ok := err.(pgx.PgError); ok {
+		return pgErr.Code
+	}
+	return ""
+}
+
+// Debug logs the info using the runtime log package if debug mode is on.
 func Debug(v ...interface{}) {
 	if isDebugMode {
 		log.Println(v)
 	}
 }
 
-// Set the debug mode to true or false
+// SetDebugMode sets the debug mode to true or false.
 func SetDebugMode(debugMode bool) {
 	isDebugMode = debugMode
 }
 
-func IsDebugMode() bool  {
+// IsDebugMode returns true if debug mode is set to on.
+func IsDebugMode() bool {
 	return isDebugMode
+}
+
+type pgToGoGenError struct {
+	Err           string
+	Code          string
+	OriginalError error
+}
+
+func (pErr *pgToGoGenError) Error() string {
+	return pErr.Err
 }
 
 /* END Error and Logging utility functions */

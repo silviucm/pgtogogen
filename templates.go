@@ -94,7 +94,7 @@ type t{{.GoFriendlyName}}Utils struct {
 	Cache CacheFor{{.GoFriendlyName}}
 }
 
-{{if gt (len .UniqueConstraints) 0}}{{range .UniqueConstraints}}var Err{{$tableGoName}}_UQ_{{.DbName}} = NewModelsErrorLocal("Unique constraint violation:","{{.DbName}}")
+{{if gt (len .UniqueConstraints) 0}}{{range .UniqueConstraints}}var Err{{$tableGoName}}_UQ_{{.DbName}} = NewModelsErrorLocalWithCode("Unique constraint violation:","{{.DbName}}", "23505")
 {{end}}{{end}}
 
 {{$colCount := len .Columns}}{{$functionName := "New"}}
