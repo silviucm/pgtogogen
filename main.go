@@ -11,7 +11,7 @@ import (
 const ARGS_ERROR_HEADER string = "\n-------------------------\nARGUMENTS ERROR:\n-------------------------\n"
 
 var dbHost, dbPort, dbName, dbUser, dbPass, dbSchema, outputFolder, packageName *string
-var generatePKGetters, generateUQGetters, generateGuidGetters *bool
+var createFolderIfNotExists, generatePKGetters, generateUQGetters, generateGuidGetters *bool
 
 var dbPortUInt16 uint16 = 5432
 
@@ -29,6 +29,9 @@ func main() {
 
 	// location settings
 	outputFolder = flag.String("o", "./models", "the output folder to generate the db structures, defaults to models")
+
+	// location settings
+	createFolderIfNotExists = flag.Bool("createFolder", false, "create the output folder it it does not exist")
 
 	// package settings
 	packageName = flag.String("pkg", "models", "the package name for the generated files")
@@ -54,8 +57,9 @@ func main() {
 		DbPass:   *dbPass,
 		DbSchema: *dbSchema,
 
-		OutputFolder: *outputFolder,
-		PackageName:  *packageName,
+		OutputFolder:            *outputFolder,
+		CreateFolderIfNotExists: *createFolderIfNotExists,
+		PackageName:             *packageName,
 
 		GeneratePKGetters:   *generatePKGetters,
 		GenerateUQGetters:   *generateUQGetters,
@@ -68,7 +72,7 @@ func main() {
 			db.Close()
 		}
 		// exit here
-		fmt.Println("Exiting here.")
+		fmt.Println("InitDatabase error: " + err.Error() + ".Exiting here.")
 		return
 
 	}
@@ -86,6 +90,15 @@ func main() {
 
 	// start generating
 	options.Generate()
+
+	// if the option to create the folder is set to true, create if not there
+	if options.CreateFolderIfNotExists {
+		if err := options.MkDir(); err != nil {
+			// exit here
+			fmt.Println("MkDir error: " + err.Error() + ".Exiting here.")
+			return
+		}
+	}
 
 	// start writing to files
 	options.WriteFiles()

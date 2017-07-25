@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"os"
 	"strconv"
 	"strings"
 	"text/template"
@@ -23,7 +24,8 @@ type ToolOptions struct {
 	DbMajorVersion int
 	DbMinorVersion int
 
-	OutputFolder string
+	OutputFolder            string
+	CreateFolderIfNotExists bool
 
 	PackageName string
 
@@ -262,6 +264,20 @@ func (t *ToolOptions) Generate() {
 
 }
 
+// MkDir creates a folder in the path indicated by t.OutputFolder, if the
+// folder does not exist.
+func (t *ToolOptions) MkDir() (err error) {
+
+	if _, err = os.Stat(t.OutputFolder); os.IsNotExist(err) {
+		return os.MkdirAll(t.OutputFolder, 0755)
+	}
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (t *ToolOptions) WriteFiles() {
 
 	fmt.Println("--------------------------------------------------------------------------------------------")
@@ -327,16 +343,16 @@ func (t *ToolOptions) WriteFiles() {
 
 func (t *ToolOptions) WriteBaseFiles() {
 
-	t.writeBaseTemplateFile("main base file", BASE_TEMPLATE, "modelsBase.go", true)
-	t.writeBaseTemplateFile("db settings base file", BASE_TEMPLATE_SETTINGS, "modelsDbSettings.go", false)
-	t.writeBaseTemplateFile("collections base file", BASE_TEMPLATE_COLLECTIONS, "modelsCollections.go", false)
-	t.writeBaseTemplateFile("collections base file", BASE_TEMPLATE_FORMS, "modelsForms.go", false)
+	t.writeBaseTemplateFile("main base file", BASE_TEMPLATE, t.PackageName+"Base.go", true)
+	t.writeBaseTemplateFile("db settings base file", BASE_TEMPLATE_SETTINGS, t.PackageName+"DbSettings.go", false)
+	t.writeBaseTemplateFile("collections base file", BASE_TEMPLATE_COLLECTIONS, t.PackageName+"Collections.go", false)
+	t.writeBaseTemplateFile("collections base file", BASE_TEMPLATE_FORMS, t.PackageName+"Forms.go", false)
 
 }
 
 func (t *ToolOptions) WriteFunctionFiles(functionFileBuffer *bytes.Buffer) {
 
-	var filePath string = t.OutputFolder + "/" + "modelsDbFunctions.go"
+	var filePath string = t.OutputFolder + "/" + t.PackageName + "DbFunctions.go"
 	var overwritable bool = true
 
 	if overwritable {
