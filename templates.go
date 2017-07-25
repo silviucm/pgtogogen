@@ -73,6 +73,56 @@ type {{.GoFriendlyName}} struct {
 {{end}}
 
 {{ $tableGoName := .GoFriendlyName}}
+/* {{$tableGoName}} slice manipulation helpers */
+
+// {{$tableGoName}}Slice allows manipulation of a slice of {{$tableGoName}} using the
+// attached methods. Simply cast []{{$tableGoName}} to {{$tableGoName}}Slice
+// e.g. {{$tableGoName}}Slice(anyGiven{{$tableGoName}}Slice)
+// and you have various methods available. Please note that these methods do not impact
+// the database in any way.
+type {{$tableGoName}}Slice []{{$tableGoName}}
+
+type {{$tableGoName}}SliceFilterFunc func(c {{$tableGoName}}) bool
+
+// Filter filters the original {{$tableGoName}}Slice elements using the supplied
+// filterFunc closure. The caller must reassign the returned collection:
+//  newSlice := Filter(filterFunc)
+func (cc {{$tableGoName}}Slice) Filter(filterFunc {{$tableGoName}}SliceFilterFunc) 	{{$tableGoName}}Slice {
+	if cc == nil {
+		return nil
+	}
+	ccNew := make({{$tableGoName}}Slice, 0, len(cc))
+	for i := range cc {
+		if filterFunc(cc[i]) == true {
+			ccNew = append(ccNew, cc[i])
+		}
+	}
+	return ccNew
+}
+
+// FilterInto filters the original {{$tableGoName}}Slice collection into the supplied
+// dest {{$tableGoName}}Slice. Passing the preallocated collection can potentially avoid
+// a huge number of allocations in a fast paced application.
+// The caller must reassign the returned collection to dest:
+//  dest = FilterInto(filterFunc, dest)
+func (cc {{$tableGoName}}Slice) FilterInto(filterFunc {{$tableGoName}}SliceFilterFunc, 
+		dest {{$tableGoName}}Slice) {{$tableGoName}}Slice {
+	if cc == nil {
+		dest = nil
+		return nil
+	}
+	if dest == nil {
+		return nil
+	}
+	for i := range cc {
+		if filterFunc(cc[i]) == true {			
+			dest = append(dest, cc[i])
+		}
+	}
+	return dest
+}
+
+{{ $tableGoName := .GoFriendlyName}}
 /* Sorting helper containers */
 {{range $i, $e := .Columns}}
 // By{{$e.GoName}} implements sort.Interface for []{{$tableGoName}} based on
