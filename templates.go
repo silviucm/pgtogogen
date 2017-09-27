@@ -85,6 +85,16 @@ type {{.GoFriendlyName}} struct {
 		t.{{.GoName}}_IsNotNull = FIELD_VALUE_NULL	
 	}{{end}}	
 }
+{{if .Nullable}}
+// IsNotNull_{{.GoName}} returns true is the field is not null (a value is present)
+func (t *{{$tableGoName}}) IsNotNull_{{.GoName}}() bool {
+	return t.{{.GoName}}_IsNotNull == FIELD_VALUE_PRESENT	
+}
+// IsNull_{{.GoName}} returns true is the field is null (a value is not present)
+func (t *{{$tableGoName}}) IsNull_{{.GoName}}() bool {
+	return t.{{.GoName}}_IsNotNull == FIELD_VALUE_NULL	
+}
+{{end}}
 {{end}}
 
 {{ $tableGoName := .GoFriendlyName}}
