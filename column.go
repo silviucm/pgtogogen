@@ -30,11 +30,10 @@ type Column struct {
 
 	IsFK bool
 
-	GoName                 string
-	GoType                 string
-	GoNullableType         string // e.g. "pgx.NullString"
-	NullableTypeCreateFunc string // e.g. "pgx.CreateNullString"
-	IsGuid                 bool
+	GoName         string
+	GoType         string
+	GoNullableType string // e.g. "pgx.NullString"
+	IsGuid         bool
 
 	ColumnComment string
 }

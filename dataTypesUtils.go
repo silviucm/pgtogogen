@@ -29,12 +29,11 @@ func GetGoFriendlyNameForColumn(columnName string) string {
 	return strings.Join(subNames, "")
 }
 
-func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableTypeReturn, nullableCreateFunc, goTypeToImport string) {
+func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableTypeReturn, goTypeToImport string) {
 
 	typeReturn = ""
 	goTypeToImport = ""
 	nullableTypeReturn = ""
-	nullableCreateFunc = "" // For compatibility reasons, see silviucm/pgx/compat.go (e.g. CreateNullString)
 
 	switch columnType {
 
@@ -42,56 +41,48 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableT
 		typeReturn = "bool"
 		if nullable {
 			nullableTypeReturn = "NullBool"
-			nullableCreateFunc = "CreateNullBool"
 		}
 
 	case "character varying", "text":
 		typeReturn = "string"
 		if nullable {
 			nullableTypeReturn = "NullString"
-			nullableCreateFunc = "CreateNullString"
 		}
 
 	case "double precision":
 		typeReturn = "float64"
 		if nullable {
 			nullableTypeReturn = "NullFloat64"
-			nullableCreateFunc = "CreateNullFloat64"
 		}
 
 	case "integer", "serial":
 		typeReturn = "int32"
 		if nullable {
 			nullableTypeReturn = "NullInt32"
-			nullableCreateFunc = "CreateNullInt32"
 		}
 
 	case "json", "jsonb":
 		typeReturn = "string"
 		if nullable {
 			nullableTypeReturn = "NullString"
-			nullableCreateFunc = "CreateNullString"
 		}
 
 	case "numeric":
 		typeReturn = "string"
 		if nullable {
 			nullableTypeReturn = "NullString"
-			nullableCreateFunc = "CreateNullString"
 		}
 
 	case "uuid":
 		typeReturn = "string"
 		if nullable {
 			nullableTypeReturn = "NullString"
-			nullableCreateFunc = "CreateNullString"
 		}
 
 	case "bigint", "bigserial":
 		typeReturn = "int64"
 		if nullable {
 			nullableTypeReturn = "NullInt64"
-			nullableCreateFunc = "CreateNullInt64"
 		}
 
 	case "timestamp with time zone", "timestamp without time zone":
@@ -101,11 +92,10 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableT
 
 		if nullable {
 			nullableTypeReturn = "NullTime"
-			nullableCreateFunc = "CreateNullTime"
 		}
 	}
 
-	return typeReturn, nullableTypeReturn, nullableCreateFunc, goTypeToImport
+	return typeReturn, nullableTypeReturn, goTypeToImport
 }
 
 func GetGoTypeNullableType(goType string) string {

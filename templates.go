@@ -34,7 +34,7 @@ import (
 	"bytes"
 	"net/http"
 	"sync"
-	"github.com/silviucm/pgx"
+	pgx "{{.Options.PgxImport}}"
 	{{range $key, $value := .GoTypesToImport}}"{{$value}}"
 	{{end}}	
 )

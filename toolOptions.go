@@ -29,6 +29,9 @@ type ToolOptions struct {
 
 	PackageName string
 
+	PgxImport    string // (the full import path e.g. "github.com/jackc/pgx/")
+	PgTypeImport string // (the full import path e.g. "github.com/jackc/pgx/pgtype")
+
 	GeneratePKGetters   bool
 	GenerateUQGetters   bool
 	GenerateGuidGetters bool

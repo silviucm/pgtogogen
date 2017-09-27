@@ -7,8 +7,13 @@ const BASE_DB_TYPES = `package {{.PackageName}}
 /* Do not modify this file unless you know what you are doing.   */
 /* ************************************************************* */
 
+import (
+	pgx "{{.PgxImport}}"	
+	pgtype "{{.PgTypeImport}}"	
+)
+
 //
-// DB Type aliases
+// DB types helper functions
 //
 
 

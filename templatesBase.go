@@ -10,7 +10,7 @@ const BASE_TEMPLATE = `package {{.PackageName}}
 /* *********************************************************** */
 
 import (
-	"github.com/silviucm/pgx"	
+	pgx "{{.PgxImport}}"	
 	"bytes"
 	"errors"
 	"log"
