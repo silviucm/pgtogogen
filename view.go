@@ -67,7 +67,7 @@ func (v *View) CollectColumns() error {
 		}
 
 		nullable := DecodeNullable(isNullable)
-		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(dataType, nullable)
+		resolvedGoType, nullableType, nullableTypeCreateFunc, goTypeToImport := GetGoTypeForColumn(dataType, nullable)
 
 		if goTypeToImport != "" {
 			if v.GoTypesToImport == nil {
@@ -88,9 +88,10 @@ func (v *View) CollectColumns() error {
 
 			IsCompositePK: false, IsPK: false, IsFK: false,
 
-			GoName:         GetGoFriendlyNameForColumn(currentColumnName),
-			GoType:         resolvedGoType,
-			GoNullableType: nullableType,
+			GoName:                 GetGoFriendlyNameForColumn(currentColumnName),
+			GoType:                 resolvedGoType,
+			GoNullableType:         nullableType,
+			NullableTypeCreateFunc: nullableTypeCreateFunc,
 
 			ConnectionPool: v.ConnectionPool,
 			Options:        v.Options,
@@ -145,7 +146,7 @@ AND    NOT attisdropped;
 		}
 
 		nullable := DecodeNullable(isNullable)
-		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(dataType, nullable)
+		resolvedGoType, nullableType, nullableTypeCreateFunc, goTypeToImport := GetGoTypeForColumn(dataType, nullable)
 
 		if goTypeToImport != "" {
 			if v.GoTypesToImport == nil {
@@ -166,9 +167,10 @@ AND    NOT attisdropped;
 
 			IsCompositePK: false, IsPK: false, IsFK: false,
 
-			GoName:         GetGoFriendlyNameForColumn(currentColumnName),
-			GoType:         resolvedGoType,
-			GoNullableType: nullableType,
+			GoName:                 GetGoFriendlyNameForColumn(currentColumnName),
+			GoType:                 resolvedGoType,
+			GoNullableType:         nullableType,
+			NullableTypeCreateFunc: nullableTypeCreateFunc,
 
 			ConnectionPool: v.ConnectionPool,
 			Options:        v.Options,

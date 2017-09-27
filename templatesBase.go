@@ -77,7 +77,7 @@ const FLAG_PANIC_ON_INIT_DB_FAIL bool = true
 var ErrNoRows = pgx.ErrNoRows
 var ErrDeadConn = pgx.ErrDeadConn
 var ErrTxClosed = pgx.ErrTxClosed
-var ErrNotificationTimeout = pgx.ErrNotificationTimeout
+var ErrNotificationTimeout = errors.New("notification timeout")
 
 var ErrTooManyRows =  errors.New("More than one row returned.")
 

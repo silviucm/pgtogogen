@@ -3,10 +3,11 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"github.com/silviucm/pgx"
 	"log"
 	"strings"
 	"text/template"
+
+	"github.com/silviucm/pgx"
 )
 
 /* Function Section */
@@ -21,11 +22,12 @@ type Function struct {
 
 	Parameters []FunctionParameter
 
-	ReturnType         string
-	ReturnGoType       string
-	ReturnNullableType string
+	ReturnType             string
+	ReturnGoType           string
+	ReturnNullableType     string // e.g. "pgx.NullString"
+	NullableTypeCreateFunc string // e.g. "pgx.CreateNullString"
 
-	Columns           []Column  // column definitions if the return type is a table
+	Columns []Column // column definitions if the return type is a table
 
 	IsReturnVoid        bool
 	IsReturnUserDefined bool
@@ -46,9 +48,10 @@ type FunctionParameter struct {
 	// can be "Input", "Output", "InOut", "Variant"
 	Mode string
 
-	Type           string
-	GoType         string
-	GoNullableType string
+	Type                   string
+	GoType                 string
+	GoNullableType         string // e.g. "pgx.NullString"
+	NullableTypeCreateFunc string // e.g. "pgx.CreateNullString"
 
 	IsOptional   bool
 	DefaultValue string
@@ -148,7 +151,7 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 			newFunction.ReturnType = routineDataType
 
 			// get the corresponding go type
-			correspondingGoType, nullableType, goTypeToImport := GetGoTypeForColumn(routineDataType, true)
+			correspondingGoType, nullableType, nullableCreateFunc, goTypeToImport := GetGoTypeForColumn(routineDataType, true)
 
 			if goTypeToImport != "" {
 				if newFunction.GoTypesToImport == nil {
@@ -160,6 +163,7 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 
 			newFunction.ReturnGoType = correspondingGoType
 			newFunction.ReturnNullableType = nullableType
+			newFunction.NullableTypeCreateFunc = nullableCreateFunc
 		}
 	}
 
@@ -198,7 +202,7 @@ func (f *Function) CollectParameters() {
 			log.Fatal("CollectParameters() fatal error inside rows.Next() iteration: ", err)
 		}
 
-		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(parameterDataType, false)
+		resolvedGoType, nullableType, nullableTypeCreateFunc, goTypeToImport := GetGoTypeForColumn(parameterDataType, false)
 
 		if goTypeToImport != "" {
 			if f.GoTypesToImport == nil {
@@ -218,9 +222,10 @@ func (f *Function) CollectParameters() {
 			Type:         parameterDataType,
 			DefaultValue: parameterDefaultVal,
 
-			GoFriendlyName: GetGoFriendlyNameForFunctionParam(currentParameterName),
-			GoType:         resolvedGoType,
-			GoNullableType: nullableType,
+			GoFriendlyName:         GetGoFriendlyNameForFunctionParam(currentParameterName),
+			GoType:                 resolvedGoType,
+			GoNullableType:         nullableType,
+			NullableTypeCreateFunc: nullableTypeCreateFunc,
 		}
 
 		if currentParam.GoType != "" {

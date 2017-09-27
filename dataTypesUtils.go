@@ -29,60 +29,69 @@ func GetGoFriendlyNameForColumn(columnName string) string {
 	return strings.Join(subNames, "")
 }
 
-func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn string, nullableTypeReturn string, goTypeToImport string) {
+func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableTypeReturn, nullableCreateFunc, goTypeToImport string) {
 
 	typeReturn = ""
 	goTypeToImport = ""
 	nullableTypeReturn = ""
+	nullableCreateFunc = "" // For compatibility reasons, see silviucm/pgx/compat.go (e.g. CreateNullString)
 
 	switch columnType {
 
 	case "boolean":
 		typeReturn = "bool"
 		if nullable {
-			nullableTypeReturn = "pgx.NullBool"
+			nullableTypeReturn = "NullBool"
+			nullableCreateFunc = "CreateNullBool"
 		}
 
 	case "character varying", "text":
 		typeReturn = "string"
 		if nullable {
-			nullableTypeReturn = "pgx.NullString"
+			nullableTypeReturn = "NullString"
+			nullableCreateFunc = "CreateNullString"
 		}
 
 	case "double precision":
 		typeReturn = "float64"
 		if nullable {
-			nullableTypeReturn = "pgx.NullFloat64"
+			nullableTypeReturn = "NullFloat64"
+			nullableCreateFunc = "CreateNullFloat64"
 		}
 
 	case "integer", "serial":
 		typeReturn = "int32"
 		if nullable {
-			nullableTypeReturn = "pgx.NullInt32"
+			nullableTypeReturn = "NullInt32"
+			nullableCreateFunc = "CreateNullInt32"
 		}
 
 	case "json", "jsonb":
 		typeReturn = "string"
 		if nullable {
-			nullableTypeReturn = "pgx.NullString"
+			nullableTypeReturn = "NullString"
+			nullableCreateFunc = "CreateNullString"
 		}
 
 	case "numeric":
 		typeReturn = "string"
 		if nullable {
-			nullableTypeReturn = "pgx.NullString"
+			nullableTypeReturn = "NullString"
+			nullableCreateFunc = "CreateNullString"
 		}
 
 	case "uuid":
 		typeReturn = "string"
 		if nullable {
-			nullableTypeReturn = "pgx.NullString"
+			nullableTypeReturn = "NullString"
+			nullableCreateFunc = "CreateNullString"
 		}
 
 	case "bigint", "bigserial":
 		typeReturn = "int64"
 		if nullable {
-			nullableTypeReturn = "pgx.NullInt64"
+			nullableTypeReturn = "NullInt64"
+			nullableCreateFunc = "CreateNullInt64"
 		}
 
 	case "timestamp with time zone", "timestamp without time zone":
@@ -91,11 +100,12 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn string, nu
 		goTypeToImport = "time"
 
 		if nullable {
-			nullableTypeReturn = "pgx.NullTime"
+			nullableTypeReturn = "NullTime"
+			nullableCreateFunc = "CreateNullTime"
 		}
 	}
 
-	return typeReturn, nullableTypeReturn, goTypeToImport
+	return typeReturn, nullableTypeReturn, nullableCreateFunc, goTypeToImport
 }
 
 func GetGoTypeNullableType(goType string) string {
@@ -103,15 +113,15 @@ func GetGoTypeNullableType(goType string) string {
 	switch goType {
 
 	case "bool":
-		return "pgx.NullBool"
+		return "NullBool"
 	case "int32", "serial":
-		return "pgx.NullInt32"
+		return "NullInt32"
 	case "int64", "bigserial":
-		return "pgx.NullInt64"
+		return "NullInt64"
 	case "string":
-		return "pgx.NullString"
+		return "NullString"
 	case "time.Time":
-		return "pgx.NullTime"
+		return "NullTime"
 	}
 
 	return ""

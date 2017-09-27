@@ -80,7 +80,7 @@ func (tbl *Table) CollectColumns() error {
 		}
 
 		nullable := DecodeNullable(isNullable)
-		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(dataType, nullable)
+		resolvedGoType, nullableType, nullableTypeCreateFunc, goTypeToImport := GetGoTypeForColumn(dataType, nullable)
 
 		if goTypeToImport != "" {
 			if tbl.GoTypesToImport == nil {
@@ -102,9 +102,10 @@ func (tbl *Table) CollectColumns() error {
 
 			IsCompositePK: false, IsPK: false, IsFK: false,
 
-			GoName:         GetGoFriendlyNameForColumn(currentColumnName),
-			GoType:         resolvedGoType,
-			GoNullableType: nullableType,
+			GoName:                 GetGoFriendlyNameForColumn(currentColumnName),
+			GoType:                 resolvedGoType,
+			GoNullableType:         nullableType,
+			NullableTypeCreateFunc: nullableTypeCreateFunc,
 
 			ConnectionPool: tbl.ConnectionPool,
 			Options:        tbl.Options,
