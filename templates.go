@@ -19,6 +19,12 @@ var fns = template.FuncMap{
 	"getNullableType": func(goType string) string {
 		return GetGoTypeNullableType(goType)
 	},
+	"getNullableTypeValueFieldName": func(goNullableType string) string {
+		return GetNullableTypeValueFieldName(goNullableType)
+	},
+	"generateNullableTypeStructTemplate": func(goNullableType string, valueField string, statusField string) string {
+		return GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField)
+	},
 }
 
 /* Tables */
@@ -35,12 +41,16 @@ import (
 	"net/http"
 	"sync"
 	pgx "{{.Options.PgxImport}}"
+	pgtype "{{.Options.PgTypeImport}}"
 	{{range $key, $value := .GoTypesToImport}}"{{$value}}"
 	{{end}}	
 )
 
 // this is a dummy variable, just to use the pgx package
 var pgxErrDeadConn{{.GoFriendlyName}} = pgx.ErrDeadConn
+
+// this is a dummy variable, just to use the pgtypes package
+const pgtypesDummy{{.GoFriendlyName}} = pgtype.Present
 
 const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.DbName}}"
 
@@ -49,7 +59,7 @@ type {{.GoFriendlyName}} struct {
 	{{range .Columns}}
 	{{if ne .DbComments ""}}/* {{.DbComments}} */{{end}}
 	{{.GoName}} {{.GoType}} // database field name: {{.DbName}}, IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
-	{{if .Nullable}}{{.GoName}}_IsNotNull bool // if true, it means the corresponding field does not currently carry a null value{{end}}
+	{{if .Nullable}}{{.GoName}}_IsNotNull pgtype.Status // default value is FIELD_VALUE_UNDEFINED, it can be also be equal to FIELD_VALUE_NULL or FIELD_VALUE_PRESENT{{end}}
 	{{end}}	
 	
 	// Set this to true if you want Inserts to ignore the PK fields	
@@ -68,7 +78,12 @@ type {{.GoFriendlyName}} struct {
 {{ $tableGoName := .GoFriendlyName}}
 {{range .Columns}}func (t *{{$tableGoName}}) Set{{.GoName}}(val {{.GoType}} {{if .Nullable}}, notNull bool{{end}}) {
 	t.{{.GoName}} = val
-	{{if .Nullable}}t.{{.GoName}}_IsNotNull = notNull{{end}}
+	{{if .Nullable}}
+	if notNull == true {
+		t.{{.GoName}}_IsNotNull = FIELD_VALUE_PRESENT	
+	} else {
+		t.{{.GoName}}_IsNotNull = FIELD_VALUE_NULL	
+	}{{end}}	
 }
 {{end}}
 
@@ -181,7 +196,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) (
 	{{else if eq $e.GoType "string"}}{{$structInstanceName}}.{{$e.GoName}} = req.FormValue("{{$e.GoName}}") 
 	{{else}}{{$structInstanceName}}.{{$e.GoName}}, err = To_{{$e.GoType}}_FromString(req.FormValue("{{$e.GoName}}")) 
 	{{end}}if err != nil { return nil, NewModelsError(errorPrefix, err) } {{if .Nullable}}
-	if err == nil && req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = true }
+	if err == nil && req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = FIELD_VALUE_PRESENT }
 	{{end}}
 	{{end}}
 
@@ -213,8 +228,8 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) (
 	{{else if eq $e.GoType "string"}}{{$structInstanceName}}.{{$e.GoName}} = req.FormValue("{{$e.GoName}}")	
 	{{else}}{{$structInstanceName}}.{{$e.GoName}}, currentError = To_{{$e.GoType}}_FromString(req.FormValue("{{$e.GoName}}"))
 	{{end}} {{if .Nullable}}
-	{{if eq $e.GoType "string"}}if req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = true }{{else}}
-	if currentError == nil && req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = true }{{end}}
+	{{if eq $e.GoType "string"}}if req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = FIELD_VALUE_PRESENT }{{else}}
+	if currentError == nil && req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = FIELD_VALUE_PRESENT }{{end}}
 	{{end}}if currentError != nil { errors = append(errors, currentError) }
 	{{end}}
 

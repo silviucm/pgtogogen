@@ -11,7 +11,9 @@ const BASE_TEMPLATE = `package {{.PackageName}}
 
 import (
 	pgx "{{.PgxImport}}"	
+	pgtype "{{.PgTypeImport}}"	
 	"bytes"
+	"context"
 	"errors"
 	"log"
 	"strconv"
@@ -20,6 +22,11 @@ import (
  	"github.com/twinj/uuid"
 	"reflect"
 )
+
+// Nullable field status constants
+const FIELD_VALUE_UNDEFINED pgtype.Status = pgtype.Undefined
+const FIELD_VALUE_NULL pgtype.Status = pgtype.Null
+const FIELD_VALUE_PRESENT pgtype.Status = pgtype.Present
 
 // Wrapper structure over the pgx transaction package, so we don't need to import
 // that package in the generated table-to-struct files.
@@ -83,10 +90,10 @@ var ErrTooManyRows =  errors.New("More than one row returned.")
 
 // Transaction isolation levels for the pgx package
 
-var IsoLevelSerializable = pgx.Serializable
-var IsoLevelRepeatableRead = pgx.RepeatableRead
-var IsoLevelReadCommitted = pgx.ReadCommitted
-var IsoLevelReadUncommitted = pgx.ReadUncommitted
+const IsoLevelSerializable = pgx.Serializable
+const IsoLevelRepeatableRead = pgx.RepeatableRead
+const IsoLevelReadCommitted = pgx.ReadCommitted
+const IsoLevelReadUncommitted = pgx.ReadUncommitted
 
 // debug mode flag
 var isDebugMode bool = false
@@ -193,15 +200,15 @@ func TxBegin() (*Transaction, error) {
 }
 
 // Begins and returns a transaction using the specified isolation level.
-// The following global variables can be passed:
-// models.IsoLevelSerializable
-// models.IsoLevelRepeatableRead
-// models.IsoLevelReadCommitted
-// models.IsoLevelReadUncommitted
-func TxBeginIso(isolationLevel string) (*Transaction, error) {
+// The following global constants can be passed (residing in the same package):
+//  IsoLevelSerializable
+//  IsoLevelRepeatableRead
+//  IsoLevelReadCommitted
+//  IsoLevelReadUncommitted
+func TxBeginIso(isolationLevel pgx.TxIsoLevel) (*Transaction, error) {
 
 	txWrapper := &Transaction{}
-	tx, err := GetDb().BeginIso(isolationLevel)
+	tx, err := GetDb().BeginEx(context.Background(), &pgx.TxOptions{IsoLevel: isolationLevel})
 
 	if err != nil {
 		return nil, err
@@ -209,7 +216,6 @@ func TxBeginIso(isolationLevel string) (*Transaction, error) {
 		txWrapper.Tx = tx
 		return txWrapper, nil
 	}
-
 }
 
 /* This method helps wrap the transaction inside a closure function. Additional arguments can be passed

@@ -116,15 +116,14 @@ func {{if eq $utilOrTransactionDbHandle "currentDbHandle"}}(utilRef *t{{.GoFrien
 		if err != nil {
 			return nil, NewModelsError(errorPrefix + " error during rows.Scan():", err)
 		}
-		
+
 		// BEGIN: assign any nullable values to the nullable fields inside the struct appropriately
-		{{range $i, $e := .Columns}}{{if .Nullable}} {{$instanceVarName}}.Set{{.GoName}}(nullable{{$e.GoName}}.GetValue(), nullable{{$e.GoName}}.Valid)
+		{{range $i, $e := .Columns}}{{if .Nullable}} {{$instanceVarName}}.Set{{.GoName}}(nullable{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, nullable{{$e.GoName}}.Status == FIELD_VALUE_PRESENT)
 		{{end}}{{end}}
-		// END: assign any nullable values to the nullable fields inside the struct appropriately			
-		
+		// END: assign any nullable values to the nullable fields inside the struct appropriately				
+						
 		instanceOf{{.GoFriendlyName}} = &{{$instanceVarName}}
 		iteration = iteration + 1
-
 	}
 
 	err = rows.Err()

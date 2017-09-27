@@ -52,7 +52,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 	}
 
 	// define the values to be passed, from the structure
-	var  {{.ColumnsStringGoSafe}} = {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
+	var  {{.ColumnsStringGoSafe}} = {{range $i, $e := .Columns}}{{if .Nullable}}{{generateNullableTypeStructTemplate .GoNullableType (print $sourceStructName "." $e.GoName) (print $sourceStructName "." $e.GoName "_IsNotNull")}}{{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
 	
 	// this will print only if debug mode enabled
 	Debug("Insert Query:", query)
@@ -140,8 +140,8 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 		{{end}}{{end}}
 	}
 
-	// define the values to be passed, from the structure
-	var  {{.ColumnsStringGoSafe}} = {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
+	// define the values to be passed, from the structure	
+	var  {{.ColumnsStringGoSafe}} = {{range $i, $e := .Columns}}{{if .Nullable}}{{generateNullableTypeStructTemplate .GoNullableType (print $sourceStructName "." $e.GoName) (print $sourceStructName "." $e.GoName "_IsNotNull")}}{{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
 	
 	// this will print only if debug mode enabled
 	Debug("Insert Query:", query)

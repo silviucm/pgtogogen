@@ -36,7 +36,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 		return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString (condition param) error:",writeErr)
 	}	
 	
-	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} }
+	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{if .Nullable}}{{generateNullableTypeStructTemplate .GoNullableType (print $sourceStructName "." $e.GoName) (print $sourceStructName "." $e.GoName "_IsNotNull")}}{{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} }
 	
 	allParams := append(instanceValuesSlice, params...)	
 	
@@ -89,7 +89,7 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 		return 0, NewModelsError(errorPrefix + "queryBuffer.WriteString (condition param) error:",writeErr)
 	}	
 	
-	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} }
+	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{if .Nullable}}{{generateNullableTypeStructTemplate .GoNullableType (print $sourceStructName "." $e.GoName) (print $sourceStructName "." $e.GoName "_IsNotNull")}}{{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}} }
 	
 	allParams := append(instanceValuesSlice, params...)
 	
@@ -329,7 +329,7 @@ func ({{$sourceStructName}} *{{.GoFriendlyName}}) {{$functionName}}() error {
 		return NewModelsError(errorPrefix + "queryBuffer.WriteString (instance condition param) error:",writeErr)
 	}	
 	
-	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}  }
+	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{if .Nullable}}{{generateNullableTypeStructTemplate .GoNullableType (print $sourceStructName "." $e.GoName) (print $sourceStructName "." $e.GoName "_IsNotNull")}}{{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}  }
 	
 	r, err := currentDbHandle.Exec(queryBuffer.String(), instanceValuesSlice...)
 	if err != nil {
@@ -378,7 +378,7 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 		return NewModelsError(errorPrefix + "queryBuffer.WriteString (instance condition param) error:",writeErr)
 	}	
 	
-	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{if .Nullable}}{{.GoNullableType}}{ {{$sourceStructName}}.{{$e.GoName}}, {{$sourceStructName}}.{{$e.GoName}}_IsNotNull } {{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}  }
+	instanceValuesSlice := []interface{} { {{range $i, $e := .Columns}}{{if .Nullable}}{{generateNullableTypeStructTemplate .GoNullableType (print $sourceStructName "." $e.GoName) (print $sourceStructName "." $e.GoName "_IsNotNull")}}{{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}, {{range $i, $e := .PKColumns}}{{$sourceStructName}}.{{$e.GoName}}{{if ne (plus1 $i) $pkColCount}},{{end}}{{end}}  }
 	
 	r, err := txWrapper.Tx.Exec(queryBuffer.String(), instanceValuesSlice...)
 	if err != nil {
