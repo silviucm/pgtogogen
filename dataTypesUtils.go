@@ -71,7 +71,7 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableT
 			nullableTypeReturn = NULLABLE_TYPE_FLOAT64
 		}
 
-	case "integer", "serial":
+	case "int32", "integer", "serial":
 		typeReturn = "int32"
 		if nullable {
 			nullableTypeReturn = NULLABLE_TYPE_INT32
@@ -95,7 +95,7 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableT
 			nullableTypeReturn = NULLABLE_TYPE_UUID
 		}
 
-	case "bigint", "bigserial":
+	case "bigint", "bigserial", "int64":
 		typeReturn = "int64"
 		if nullable {
 			nullableTypeReturn = NULLABLE_TYPE_INT64
@@ -133,9 +133,9 @@ func GetGoTypeNullableType(goType string) string {
 		return NULLABLE_TYPE_FLOAT32
 	case "float64":
 		return NULLABLE_TYPE_FLOAT64
-	case "int32", "serial":
+	case "int32", "integer", "serial":
 		return NULLABLE_TYPE_INT32
-	case "int64", "bigserial":
+	case "int64", "bigserial", "bigint":
 		return NULLABLE_TYPE_INT64
 	case "string":
 		return NULLABLE_TYPE_STRING
@@ -162,25 +162,27 @@ func GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField 
 	switch goNullableType {
 
 	case NULLABLE_TYPE_BOOL:
-		return "pgtype.Bool{Bool: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Bool{Bool: " + valueField + ", Status: " + statusField + "}"
 	case NULLABLE_TYPE_FLOAT32:
-		return "pgtype.Float4{Float: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Float4{Float: " + valueField + ", Status: " + statusField + "}"
 	case NULLABLE_TYPE_FLOAT64:
-		return "pgtype.Float8{Float: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Float8{Float: " + valueField + ", Status: " + statusField + "}"
 	case NULLABLE_TYPE_INT16:
-		return "pgtype.Int2{Int: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Int2{Int: " + valueField + ", Status: " + statusField + "}"
 	case NULLABLE_TYPE_INT32:
-		return "pgtype.Int4{Int: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Int4{Int: " + valueField + ", Status: " + statusField + "}"
 	case NULLABLE_TYPE_INT64:
-		return "pgtype.Int8{Int: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Int8{Int: " + valueField + ", Status: " + statusField + "}"
 	case NULLABLE_TYPE_TEXT:
-		return "pgtype.Text{String: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Text{String: " + valueField + ", Status: " + statusField + "}"
 	case NULLABLE_TYPE_VARCHAR:
-		return "pgtype.Varchar{String: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Varchar{String: " + valueField + ", Status: " + statusField + "}"
 	case NULLABLE_TYPE_TIMESTAMP_TZ:
-		return "pgtype.Timestamptz{Time: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Timestamptz{Time: " + valueField + ", Status: " + statusField + "}"
 	case NULLABLE_TYPE_TIMESTAMP:
-		return "pgtype.Timestamp{Time: " + valueField + ", Status: " + statusField + "}"
+		// Unfortunately, for Timestamp without timezone, we need to convert to
+		// UTC location for pgtype.Timestamp to accept the value
+		return "&pgtype.Timestamp{Time: utcTime(" + valueField + "), Status: " + statusField + "}"
 	}
 
 	return "[GenerateNullableTypeStructTemplate: could not find the go nullable type: '" + goNullableType + "']"

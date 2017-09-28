@@ -484,6 +484,12 @@ func Now() time.Time {
 	return time.Now()
 }
 
+// Converts the provided time.Time to an UTC location.
+// Necessary for pgtype.Timestamp (without timezone)
+func utcTime(value time.Time) time.Time {
+	return time.Date(value.Year(), value.Month(), value.Day(), value.Hour(), value.Minute(), value.Second(), value.Nanosecond(), time.UTC)
+}
+
 // Returns a new Guid
 func NewGuid() string {
 	return uuid.NewV4().String()
