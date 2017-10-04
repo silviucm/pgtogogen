@@ -155,7 +155,7 @@ func GetGoTypeNullableType(goType string) string {
 //
 // would generate the following string:
 //
-//  "pgtype.Varchar{String:sourceCmsArticle.Overview, Status: sourceCmsArticle.Overview_Is_Present}"
+//  "&pgtype.Varchar{String:sourceCmsArticle.Overview, Status: sourceCmsArticle.Overview_Is_Present}"
 //
 func GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField string) string {
 
