@@ -6,12 +6,11 @@ The project was started in late 2014, committed to GitHub in early 2015, and I'v
 The project is partially functional. As is the case with most GitHub projects, use it at your own risk. 
 
 ### Installation
-I am keeping a fork of pgx that I regularly synchronize with the upstream master.
+Currently, this tool is compatible with pgx v3. For v2 compatibility you will need to use the pgxV2 branch
 
 To install the tool, run:
 ```bash
  go get -u github.com/silviucm/utils
- go get -u github.com/silviucm/pgx
  go get -u github.com/silviucm/pgtogogen
 ```
 	
