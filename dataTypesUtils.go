@@ -162,27 +162,27 @@ func GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField 
 	switch goNullableType {
 
 	case NULLABLE_TYPE_BOOL:
-		return "&pgtype.Bool{Bool: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Bool{Bool: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_FLOAT32:
-		return "&pgtype.Float4{Float: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Float4{Float: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_FLOAT64:
-		return "&pgtype.Float8{Float: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Float8{Float: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_INT16:
-		return "&pgtype.Int2{Int: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Int2{Int: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_INT32:
-		return "&pgtype.Int4{Int: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Int4{Int: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_INT64:
-		return "&pgtype.Int8{Int: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Int8{Int: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_TEXT:
-		return "&pgtype.Text{String: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Text{String: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_VARCHAR:
-		return "&pgtype.Varchar{String: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Varchar{String: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_TIMESTAMP_TZ:
-		return "&pgtype.Timestamptz{Time: " + valueField + ", Status: " + statusField + "}"
+		return "&pgtype.Timestamptz{Time: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_TIMESTAMP:
 		// Unfortunately, for Timestamp without timezone, we need to convert to
 		// UTC location for pgtype.Timestamp to accept the value
-		return "&pgtype.Timestamp{Time: utcTime(" + valueField + "), Status: " + statusField + "}"
+		return "&pgtype.Timestamp{Time: utcTime(" + valueField + "), Status: statusFromBool(" + statusField + ")}"
 	}
 
 	return "[GenerateNullableTypeStructTemplate: could not find the go nullable type: '" + goNullableType + "']"

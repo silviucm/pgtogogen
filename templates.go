@@ -59,7 +59,7 @@ type {{.GoFriendlyName}} struct {
 	{{range .Columns}}
 	{{if ne .DbComments ""}}/* {{.DbComments}} */{{end}}
 	{{.GoName}} {{.GoType}} // database field name: {{.DbName}}, IsPK: {{.IsPK}} , IsCompositePK: {{.IsCompositePK}}, IsFK: {{.IsFK}}
-	{{if .Nullable}}{{.GoName}}_IsNotNull pgtype.Status // default value is FIELD_VALUE_UNDEFINED, it can be also be equal to FIELD_VALUE_NULL or FIELD_VALUE_PRESENT{{end}}
+	{{if .Nullable}}{{.GoName}}_IsNotNull bool // if true, it means the value is not null{{end}}
 	{{end}}	
 	
 	// Set this to true if you want Inserts to ignore the PK fields	
@@ -78,21 +78,16 @@ type {{.GoFriendlyName}} struct {
 {{ $tableGoName := .GoFriendlyName}}
 {{range .Columns}}func (t *{{$tableGoName}}) Set{{.GoName}}(val {{.GoType}} {{if .Nullable}}, notNull bool{{end}}) {
 	t.{{.GoName}} = val
-	{{if .Nullable}}
-	if notNull == true {
-		t.{{.GoName}}_IsNotNull = FIELD_VALUE_PRESENT	
-	} else {
-		t.{{.GoName}}_IsNotNull = FIELD_VALUE_NULL	
-	}{{end}}	
+	{{if .Nullable}}t.{{.GoName}}_IsNotNull = notNull{{end}}
 }
 {{if .Nullable}}
 // IsNotNull_{{.GoName}} returns true is the field is not null (a value is present)
 func (t *{{$tableGoName}}) IsNotNull_{{.GoName}}() bool {
-	return t.{{.GoName}}_IsNotNull == FIELD_VALUE_PRESENT	
+	return t.{{.GoName}}_IsNotNull
 }
 // IsNull_{{.GoName}} returns true is the field is null (a value is not present)
 func (t *{{$tableGoName}}) IsNull_{{.GoName}}() bool {
-	return t.{{.GoName}}_IsNotNull == FIELD_VALUE_NULL	
+	return t.{{.GoName}}_IsNotNull
 }
 {{end}}
 {{end}}
@@ -206,7 +201,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) (
 	{{else if eq $e.GoType "string"}}{{$structInstanceName}}.{{$e.GoName}} = req.FormValue("{{$e.GoName}}") 
 	{{else}}{{$structInstanceName}}.{{$e.GoName}}, err = To_{{$e.GoType}}_FromString(req.FormValue("{{$e.GoName}}")) 
 	{{end}}if err != nil { return nil, NewModelsError(errorPrefix, err) } {{if .Nullable}}
-	if err == nil && req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = FIELD_VALUE_PRESENT }
+	if err == nil && req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = true }
 	{{end}}
 	{{end}}
 
@@ -238,8 +233,8 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) (
 	{{else if eq $e.GoType "string"}}{{$structInstanceName}}.{{$e.GoName}} = req.FormValue("{{$e.GoName}}")	
 	{{else}}{{$structInstanceName}}.{{$e.GoName}}, currentError = To_{{$e.GoType}}_FromString(req.FormValue("{{$e.GoName}}"))
 	{{end}} {{if .Nullable}}
-	{{if eq $e.GoType "string"}}if req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = FIELD_VALUE_PRESENT }{{else}}
-	if currentError == nil && req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = FIELD_VALUE_PRESENT }{{end}}
+	{{if eq $e.GoType "string"}}if req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = true }{{else}}
+	if currentError == nil && req.FormValue("{{$e.GoName}}") != "" { {{$structInstanceName}}.{{$e.GoName}}_IsNotNull = true }{{end}}
 	{{end}}if currentError != nil { errors = append(errors, currentError) }
 	{{end}}
 

@@ -118,7 +118,7 @@ func {{if eq $utilOrTransactionDbHandle "currentDbHandle"}}(utilRef *t{{.GoFrien
 		}
 
 		// BEGIN: assign any nullable values to the nullable fields inside the struct appropriately
-		{{range $i, $e := .Columns}}{{if .Nullable}} {{$instanceVarName}}.Set{{.GoName}}(nullable{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, nullable{{$e.GoName}}.Status == FIELD_VALUE_PRESENT)
+		{{range $i, $e := .Columns}}{{if .Nullable}} {{$instanceVarName}}.Set{{.GoName}}(nullable{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, boolFromStatus(nullable{{$e.GoName}}.Status))
 		{{end}}{{end}}
 		// END: assign any nullable values to the nullable fields inside the struct appropriately				
 						

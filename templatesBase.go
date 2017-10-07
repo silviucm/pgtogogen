@@ -24,9 +24,26 @@ import (
 )
 
 // Nullable field status constants
-const FIELD_VALUE_UNDEFINED pgtype.Status = pgtype.Undefined
-const FIELD_VALUE_NULL pgtype.Status = pgtype.Null
-const FIELD_VALUE_PRESENT pgtype.Status = pgtype.Present
+const cFIELD_VALUE_UNDEFINED pgtype.Status = pgtype.Undefined
+const cFIELD_VALUE_NULL pgtype.Status = pgtype.Null
+const cFIELD_VALUE_PRESENT pgtype.Status = pgtype.Present
+
+// statusFromBool returns pgtype.Present if notNull is true or pgtype.Null otherwise
+func statusFromBool(notNull bool) pgtype.Status {
+	if notNull {
+		return cFIELD_VALUE_PRESENT
+	}
+	return cFIELD_VALUE_NULL
+}
+
+// boolFromStatus returns true if pgtype.Status is Present or false otherwise
+func boolFromStatus(status pgtype.Status) bool {
+	if status == cFIELD_VALUE_PRESENT {
+		return true
+	}
+	return false
+}
+
 
 // Wrapper structure over the pgx transaction package, so we don't need to import
 // that package in the generated table-to-struct files.

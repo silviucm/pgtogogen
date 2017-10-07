@@ -26,7 +26,7 @@ const {{.GoFriendlyName}}_DB_VIEW_NAME string = "{{.DbName}}"
 type {{.GoFriendlyName}} struct {
 	{{range .Columns}}// database field name: {{.DbName}}
 	{{.GoName}} {{.GoType}}
-	{{if .Nullable}}{{.GoName}}_IsNotNull pgtype.Status // if true, it means the corresponding field does not currently carry a null value
+	{{if .Nullable}}{{.GoName}}_IsNotNull bool // if true, it means the value is not null
 	{{end}}
 	{{end}}		
 }
@@ -44,12 +44,7 @@ func (a Sort{{$tableGoName}}By{{$e.GoName}}) Less(i, j int) bool { return LessCo
 {{end}}
 {{range .Columns}}func (t *{{$tableGoName}}) Set{{.GoName}}(val {{.GoType}} {{if .Nullable}}, notNull bool{{end}}) {
 	t.{{.GoName}} = val
-	{{if .Nullable}}
-	if notNull == true {
-		t.{{.GoName}}_IsNotNull = FIELD_VALUE_PRESENT	
-	} else {
-		t.{{.GoName}}_IsNotNull = FIELD_VALUE_NULL	
-	}{{end}}	
+	{{if .Nullable}}t.{{.GoName}}_IsNotNull = notNull{{end}}
 }
 {{end}}
 

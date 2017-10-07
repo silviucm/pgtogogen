@@ -30,7 +30,7 @@ const COMMON_CODE_SELECT_QUERY_WHERE = `if err != nil {
 		}
 		
 		// BEGIN: assign any nullable values to the nullable fields inside the struct appropriately
-		{{range $i, $e := .Columns}}{{if .Nullable}} {{$instanceVarName}}.Set{{.GoName}}(nullable{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, nullable{{$e.GoName}}.Status == FIELD_VALUE_PRESENT)
+		{{range $i, $e := .Columns}}{{if .Nullable}} {{$instanceVarName}}.Set{{.GoName}}(nullable{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, boolFromStatus(nullable{{$e.GoName}}.Status))
 		{{end}}{{end}}
 		// END: assign any nullable values to the nullable fields inside the struct appropriately			
 		
@@ -447,7 +447,7 @@ const COMMON_CODE_SELECT_ALL_QUERY = `if err != nil {
 		}
 		
 		// BEGIN: assign any nullable values to the nullable fields inside the struct appropriately
-		{{range $i, $e := .Columns}}{{if .Nullable}} {{$instanceVarName}}.Set{{.GoName}}(nullable{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, nullable{{$e.GoName}}.Status == FIELD_VALUE_PRESENT)
+		{{range $i, $e := .Columns}}{{if .Nullable}} {{$instanceVarName}}.Set{{.GoName}}(nullable{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, boolFromStatus(nullable{{$e.GoName}}.Status))
 		{{end}}{{end}}
 		// END: assign any nullable values to the nullable fields inside the struct appropriately				
 		

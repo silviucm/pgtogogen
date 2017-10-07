@@ -50,7 +50,7 @@ func (utilRef *t{{.ParentTable.GoFriendlyName}}Utils) {{$functionName}}` +
 				{{range .ParentTable.Columns}}{{if not .Nullable}}{{.GoName}}: param{{.GoName}},
 				{{end}}{{end}}
 			}
-			{{range $e := .ParentTable.Columns}}{{if $e.Nullable}}returnStruct.Set{{.GoName}}(param{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, param{{$e.GoName}}.Status == FIELD_VALUE_PRESENT)
+			{{range $e := .ParentTable.Columns}}{{if $e.Nullable}}returnStruct.Set{{.GoName}}(param{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, boolFromStatus(param{{$e.GoName}}.Status))
 			{{end}}{{end}}			
 			// return the structure
 			return returnStruct, nil
@@ -102,7 +102,7 @@ func (txWrapper *Transaction) {{$functionName}}` +
 				{{range .ParentTable.Columns}}{{if not .Nullable}}{{.GoName}}: param{{.GoName}},
 				{{end}}{{end}}
 			}
-			{{range $e := .ParentTable.Columns}}{{if $e.Nullable}}returnStruct.Set{{.GoName}}(param{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, param{{$e.GoName}}.Status == FIELD_VALUE_PRESENT)
+			{{range $e := .ParentTable.Columns}}{{if $e.Nullable}}returnStruct.Set{{.GoName}}(param{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, boolFromStatus(param{{$e.GoName}}.Status))
 			{{end}}{{end}}			
 			// return the structure
 			return returnStruct, nil
@@ -158,7 +158,7 @@ func (utilRef *t{{.ParentTable.GoFriendlyName}}Utils) {{$functionName}}` +
 				{{range .ParentTable.Columns}}{{if not .Nullable}}{{.GoName}}: param{{.GoName}},
 				{{end}}{{end}}
 			}
-			{{range $e := .ParentTable.Columns}}{{if $e.Nullable}}returnStruct.Set{{.GoName}}(param{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, param{{$e.GoName}}.Status == FIELD_VALUE_PRESENT)
+			{{range $e := .ParentTable.Columns}}{{if $e.Nullable}}returnStruct.Set{{.GoName}}(param{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, boolFromStatus(param{{$e.GoName}}.Status))
 			{{end}}{{end}}			
 			// return the structure
 			return returnStruct, nil
@@ -210,7 +210,7 @@ func (txWrapper *Transaction) {{$functionName}}` +
 				{{range .ParentTable.Columns}}{{if not .Nullable}}{{.GoName}}: param{{.GoName}},
 				{{end}}{{end}}
 			}
-			{{range $e := .ParentTable.Columns}}{{if $e.Nullable}}returnStruct.Set{{.GoName}}(param{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, param{{$e.GoName}}.Status == FIELD_VALUE_PRESENT)
+			{{range $e := .ParentTable.Columns}}{{if $e.Nullable}}returnStruct.Set{{.GoName}}(param{{$e.GoName}}.{{getNullableTypeValueFieldName $e.GoNullableType}}, boolFromStatus(param{{$e.GoName}}.Status))
 			{{end}}{{end}}			
 			// return the structure
 			return returnStruct, nil
