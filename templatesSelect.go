@@ -226,13 +226,13 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(cacheOption int, con
 {{$functionName := "SelectPage"}}{{$sourceStructName := print "source" .GoFriendlyName}}
 // Returns the paginated rows from {{.DbName}}, corresponding to the supplied condition
 // and the respective numbered parameters. The condition must not include the WHERE keyword.
-// The pageSize parameter (must be greater than or equal to 1) indicates how many maximum records are to be returned.
 // The pageNumber parameter (must be greater than or equal to 1) indicates the page offset from the beginning of the resultset.
+// The pageSize parameter (must be greater than or equal to 1) indicates how many maximum records are to be returned.
 // If pageNumber is 1, there is no offset.
 // This version is not cached and calls the database directly.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.
-func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageSize int, pageNumber int, condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageNumber int, pageSize int, condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
 
@@ -251,14 +251,14 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageSize int, pageNu
 {{$functionName := "SelectPageCached"}}{{$sourceStructName := print "source" .GoFriendlyName}}
 // Returns the rows from {{.DbName}}, corresponding to the supplied condition 
 // and the respective numbered parameters. The condition must not include the WHERE keyword.
-// The pageSize parameter (must be greater than or equal to 1) indicates how many maximum records are to be returned.
 // The pageNumber parameter (must be greater than or equal to 1) indicates the page offset from the beginning of the resultset.
+// The pageSize parameter (must be greater than or equal to 1) indicates how many maximum records are to be returned.
 // If pageNumber is 1, there is no offset.
 // The cacheOption parameter is one of the FLAG_CACHE_[behaviour] global integer constants.
 // FLAG_CACHE_DISABLE has a value of 0, and caching is completely bypassed.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.
-func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageSize int, pageNumber int, cacheOption int, condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageNumber int, pageSize int, cacheOption int, condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
 
@@ -377,7 +377,7 @@ func (txWrapper *Transaction) {{$functionName}}(cacheOption int, condition strin
 // This version is not cached and calls the database directly.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.
-func (txWrapper *Transaction) {{$functionName}}(pageSize int, pageNumber int, condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
+func (txWrapper *Transaction) {{$functionName}}(pageNumber int, pageSize int, condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
 
@@ -527,13 +527,13 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(orderBy string) ([]{
 {{$colCount := len .Columns}}
 {{$functionName := "SelectAllPage"}}{{$sourceStructName := print "source" .GoFriendlyName}}
 // Returns a page of rows from {{.DbName}} equal to pageSize, 
-// with the appropriate offset determined by pageNumber. 
+// with the appropriate offset determined by pageNumber (starting from 1, not 0).
 // The orderBy parameter must not contain the 'ORDER BY' keywords, and it can be empty, 
 // in which case the results are unpredictable.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation succeeds, it returns the page-restricted rows, and nil as error.
 // If operation fails, it returns nil and the error.
-func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageSize int, pageNumber int, orderBy string) ([]{{.GoFriendlyName}},  error) {
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageNumber int, pageSize int, orderBy string) ([]{{.GoFriendlyName}},  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
 
