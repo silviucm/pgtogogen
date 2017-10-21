@@ -14,6 +14,8 @@ const (
 	NULLABLE_TYPE_INT16        = "pgtype.Int2"
 	NULLABLE_TYPE_INT32        = "pgtype.Int4"
 	NULLABLE_TYPE_INT64        = "pgtype.Int8"
+	NULLABLE_TYPE_JSON         = "JSON"
+	NULLABLE_TYPE_JSONB        = "JSONB"
 	NULLABLE_TYPE_NUMERIC      = "pgtype.Numeric"
 	NULLABLE_TYPE_STRING       = "pgtype.Text"
 	NULLABLE_TYPE_TEXT         = "pgtype.Text"
@@ -77,10 +79,20 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableT
 			nullableTypeReturn = NULLABLE_TYPE_INT32
 		}
 
-	case "json", "jsonb":
+	// We need to make sure have a "JSON" type embedding pgtypes.JSON
+	// inside the generated models package
+	case "json":
 		typeReturn = "string"
 		if nullable {
-			nullableTypeReturn = NULLABLE_TYPE_STRING
+			nullableTypeReturn = NULLABLE_TYPE_JSON
+		}
+
+	// We need to make sure have a "JSONB" type embedding pgtypes.JSONB
+	// inside the generated models package
+	case "jsonb":
+		typeReturn = "string"
+		if nullable {
+			nullableTypeReturn = NULLABLE_TYPE_JSONB
 		}
 
 	case "numeric":
@@ -137,6 +149,10 @@ func GetGoTypeNullableType(goType string) string {
 		return NULLABLE_TYPE_INT32
 	case "int64", "bigserial", "bigint":
 		return NULLABLE_TYPE_INT64
+	case "JSONString":
+		return NULLABLE_TYPE_JSON
+	case "JSONBString":
+		return NULLABLE_TYPE_JSONB
 	case "string":
 		return NULLABLE_TYPE_STRING
 	case "time.Time":
@@ -173,6 +189,10 @@ func GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField 
 		return "&pgtype.Int4{Int: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_INT64:
 		return "&pgtype.Int8{Int: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
+	case NULLABLE_TYPE_JSON:
+		return "&pgtype.JSON{Bytes: []byte(" + valueField + "), Status: statusFromBool(" + statusField + ")}"
+	case NULLABLE_TYPE_JSONB:
+		return "&pgtype.JSONB{Bytes: []byte(" + valueField + "), Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_TEXT:
 		return "&pgtype.Text{String: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_VARCHAR:
@@ -205,6 +225,10 @@ func GetNullableTypeValueFieldName(goNullableType string) string {
 		return "Int"
 	case NULLABLE_TYPE_INT64:
 		return "Int"
+	case NULLABLE_TYPE_JSON:
+		return "String()"
+	case NULLABLE_TYPE_JSONB:
+		return "String()"
 	case NULLABLE_TYPE_TEXT:
 		return "String"
 	case NULLABLE_TYPE_VARCHAR:

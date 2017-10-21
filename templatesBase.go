@@ -23,6 +23,20 @@ import (
 	"reflect"
 )
 
+// Json types that embed the pgtype nullable types, and offer additional
+// string-rendering methods
+type JSON struct {
+	pgtype.JSON
+}
+
+func (j *JSON)String() string { return string(j.Bytes) }
+
+type JSONB struct {
+	pgtype.JSONB
+}
+
+func (j *JSONB)String() string { return string(j.Bytes) }
+
 // Nullable field status constants
 const cFIELD_VALUE_UNDEFINED pgtype.Status = pgtype.Undefined
 const cFIELD_VALUE_NULL pgtype.Status = pgtype.Null
