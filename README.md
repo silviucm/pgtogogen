@@ -1,5 +1,5 @@
 # pgtogogen
-Pgtogogen is a Postgres-entities-to-Go structures generator with the low-level db connectivity details handled by Jack Christensen's pgx project  (https://github.com/silviucm/pgx).
+Pgtogogen is a Postgres-entities-to-Go structures generator with the low-level db connectivity details handled by Jack Christensen's pgx project  (https://github.com/jackc/pgx).
 The project was started in late 2014, committed to GitHub in early 2015, and I've kept adding features sporadically ever since.
 
 ### Status: In Progress
