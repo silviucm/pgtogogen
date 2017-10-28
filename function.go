@@ -7,8 +7,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/silviucm/pgx"
-	"github.com/silviucm/pgx/pgtype"
+	"github.com/silviucm/pgtogogen/internal/pgx"
+	"github.com/silviucm/pgtogogen/internal/pgx/pgtype"
 )
 
 /* Function Section */

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"text/template"
 
-	pgx "github.com/silviucm/pgx"
-	pgtype "github.com/silviucm/pgx/pgtype"
+	pgx "github.com/silviucm/pgtogogen/internal/pgx"
+	pgtype "github.com/silviucm/pgtogogen/internal/pgx/pgtype"
 )
 
 /* Table Section */

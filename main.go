@@ -57,8 +57,8 @@ func main() {
 		DbPass:   *dbPass,
 		DbSchema: *dbSchema,
 
-		PgxImport:    "github.com/silviucm/pgx",
-		PgTypeImport: "github.com/silviucm/pgx/pgtype",
+		PgxImport:    "github.com/jackc/pgx",
+		PgTypeImport: "github.com/jackc/pgx/pgtype",
 
 		OutputFolder:            *outputFolder,
 		CreateFolderIfNotExists: *createFolderIfNotExists,

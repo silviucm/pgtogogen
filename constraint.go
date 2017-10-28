@@ -6,7 +6,7 @@ import (
 	"log"
 	"text/template"
 
-	"github.com/silviucm/pgx"
+	"github.com/silviucm/pgtogogen/internal/pgx"
 )
 
 /* Constraint Section */

@@ -4,7 +4,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/silviucm/pgx/pgtype"
+	"github.com/silviucm/pgtogogen/internal/pgx/pgtype"
 )
 
 const (

@@ -6,8 +6,8 @@ import (
 	"log"
 	"text/template"
 
-	pgx "github.com/silviucm/pgx"
-	pgtype "github.com/silviucm/pgx/pgtype"
+	pgtype "github.com/silviucm/pgtogogen/internal/pgx/pgtype"
+	pgx "github.com/silviucm/pgtogogen/internal/pgx"
 )
 
 /* Column Section */
