@@ -9,7 +9,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/silviucm/pgx"
+	pgx "github.com/silviucm/pgx"
+	pgtype "github.com/silviucm/pgx/pgtype"
 )
 
 /* View Section */
@@ -49,8 +50,8 @@ type View struct {
 func (v *View) CollectColumns() error {
 
 	var currentColumnName, isNullable, dataType string
-	var columnDefault pgx.NullString
-	var charMaxLength pgx.NullInt32
+	var columnDefault pgtype.Text
+	var charMaxLength pgtype.Int4
 
 	rows, err := v.ConnectionPool.Query("SELECT column_name, column_default, is_nullable, data_type, character_maximum_length FROM information_schema.columns "+
 		" WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position;", v.DbName)
@@ -117,8 +118,8 @@ func (v *View) CollectColumns() error {
 func (v *View) CollectMaterializedViewColumns() error {
 
 	var currentColumnName, isNullable, dataType string
-	var columnDefault pgx.NullString
-	var charMaxLength pgx.NullInt32
+	var columnDefault pgtype.Text
+	var charMaxLength pgtype.Int4
 
 	var materializedViewsColumnsQuery string = `SELECT attname AS column_name, 
 	null as column_default,

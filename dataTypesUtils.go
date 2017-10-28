@@ -4,7 +4,7 @@ import (
 	"log"
 	"strings"
 
-	"github.com/silviucm/pgx"
+	"github.com/silviucm/pgx/pgtype"
 )
 
 const (
@@ -243,9 +243,9 @@ func GetNullableTypeValueFieldName(goNullableType string) string {
 
 }
 
-func DecodeIsColumnSequence(columnDefaultValue pgx.NullString) bool {
+func DecodeIsColumnSequence(columnDefaultValue pgtype.Text) bool {
 
-	if columnDefaultValue.Valid == false {
+	if columnDefaultValue.Status == pgtype.Null {
 		return false
 	}
 
@@ -270,11 +270,11 @@ func DecodeNullable(isNullable string) bool {
 	return false
 }
 
-func DecodeMaxLength(maxLength pgx.NullInt32) int {
+func DecodeMaxLength(maxLength pgtype.Int4) int {
 
-	if maxLength.Valid == false {
+	if maxLength.Status == pgtype.Null {
 		return -1
 	}
 
-	return int(maxLength.Int32)
+	return int(maxLength.Int)
 }

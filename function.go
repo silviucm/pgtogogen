@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/silviucm/pgx"
+	"github.com/silviucm/pgx/pgtype"
 )
 
 /* Function Section */
@@ -174,8 +175,8 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 func (f *Function) CollectParameters() {
 
 	var currentParameterName, parameterDataType, parameterMode string
-	var parameterDefault pgx.NullString
-	var parameterOrdinalPosition pgx.NullInt32
+	var parameterDefault pgtype.Text
+	var parameterOrdinalPosition pgtype.Int4
 
 	var paramsQuery = `
 		SELECT p.parameter_name, p.data_type, p.parameter_mode, p.parameter_default, p.ordinal_position
@@ -209,7 +210,7 @@ func (f *Function) CollectParameters() {
 		}
 
 		var parameterDefaultVal string = ""
-		if parameterDefault.Valid && parameterDefault.String != "" {
+		if parameterDefault.Status == pgtype.Present && parameterDefault.String != "" {
 			parameterDefaultVal = parameterDefault.String
 		}
 

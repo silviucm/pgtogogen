@@ -9,7 +9,8 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/silviucm/pgx"
+	pgx "github.com/silviucm/pgx"
+	pgtype "github.com/silviucm/pgx/pgtype"
 )
 
 /* Table Section */
@@ -61,8 +62,8 @@ type Table struct {
 func (tbl *Table) CollectColumns() error {
 
 	var currentColumnName, isNullable, dataType string
-	var columnDefault pgx.NullString
-	var charMaxLength pgx.NullInt32
+	var columnDefault pgtype.Text
+	var charMaxLength pgtype.Int4
 	var ordinalPosition int
 
 	rows, err := tbl.ConnectionPool.Query("SELECT column_name, column_default, is_nullable, data_type, character_maximum_length, ordinal_position FROM information_schema.columns "+

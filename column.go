@@ -6,7 +6,8 @@ import (
 	"log"
 	"text/template"
 
-	"github.com/silviucm/pgx"
+	pgx "github.com/silviucm/pgx"
+	pgtype "github.com/silviucm/pgx/pgtype"
 )
 
 /* Column Section */
@@ -21,7 +22,7 @@ type Column struct {
 	OrdinalPosition int
 	Type            string
 	MaxLength       int
-	DefaultValue    pgx.NullString
+	DefaultValue    pgtype.Text
 	Nullable        bool
 	IsSequence      bool
 
