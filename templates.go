@@ -38,6 +38,7 @@ const TABLE_TEMPLATE = `package {{.Options.PackageName}}
 
 import (
 	"bytes"
+	"io"
 	"net/http"
 	"sync"
 	pgx "{{.Options.PgxImport}}"
@@ -261,6 +262,16 @@ func (instance *{{.GoFriendlyName}}) {{$functionName}}() {
 func (utilRef *t{{.GoFriendlyName}}Utils) ToDbFieldName(fieldDbOrGoName string) string {
 	
 	{{range $i, $e := .Columns}}if fieldDbOrGoName == "{{$e.GoName}}" || fieldDbOrGoName == "{{$e.DbName}}" { return "{{$e.DbName}}" }			
+	{{end}}
+
+	return ""
+}
+
+// Returns the database field type, regardless whether the Go name or the db name was provided.
+// If no field was found, return empty string.
+func (utilRef *t{{.GoFriendlyName}}Utils) ToDbFieldTypeFromColName(fieldDbOrGoName string) string {
+	
+	{{range $i, $e := .Columns}}if fieldDbOrGoName == "{{$e.GoName}}" || fieldDbOrGoName == "{{$e.DbName}}" { return "{{$e.Type}}" }			
 	{{end}}
 
 	return ""

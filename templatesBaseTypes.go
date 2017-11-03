@@ -8,14 +8,45 @@ const BASE_DB_TYPES = `package {{.PackageName}}
 /* ************************************************************* */
 
 import (
-	pgx "{{.PgxImport}}"	
 	pgtype "{{.PgTypeImport}}"	
 )
 
 //
-// DB types helper functions
+// DB custom type, aliases and type-related helper functions
 //
 
+// Json types that embed the pgtype nullable types, and offer additional
+// string-rendering methods
+type JSON struct {
+	pgtype.JSON
+}
 
+func (j *JSON)String() string { return string(j.Bytes) }
 
+type JSONB struct {
+	pgtype.JSONB
+}
+
+func (j *JSONB)String() string { return string(j.Bytes) }
+
+// Nullable field status constants
+const cFIELD_VALUE_UNDEFINED pgtype.Status = pgtype.Undefined
+const cFIELD_VALUE_NULL pgtype.Status = pgtype.Null
+const cFIELD_VALUE_PRESENT pgtype.Status = pgtype.Present
+
+// statusFromBool returns pgtype.Present if notNull is true or pgtype.Null otherwise
+func statusFromBool(notNull bool) pgtype.Status {
+	if notNull {
+		return cFIELD_VALUE_PRESENT
+	}
+	return cFIELD_VALUE_NULL
+}
+
+// boolFromStatus returns true if pgtype.Status is Present or false otherwise
+func boolFromStatus(status pgtype.Status) bool {
+	if status == cFIELD_VALUE_PRESENT {
+		return true
+	}
+	return false
+}
 `

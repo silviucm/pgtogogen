@@ -165,6 +165,9 @@ func (t *ToolOptions) Generate() {
 			// generate the insert-related functions
 			t.Tables[i].GenerateInsertFunctions()
 
+			// generate the bulk-copy-related functions
+			t.Tables[i].GenerateBulkCopyFunctions()
+
 			// generate the update-related functions
 			t.Tables[i].GenerateUpdateFunctions()
 
@@ -346,10 +349,13 @@ func (t *ToolOptions) WriteFiles() {
 
 func (t *ToolOptions) WriteBaseFiles() {
 
-	t.writeBaseTemplateFile("main base file", BASE_TEMPLATE, t.PackageName+"Base.go", true)
-	t.writeBaseTemplateFile("db settings base file", BASE_TEMPLATE_SETTINGS, t.PackageName+"DbSettings.go", false)
-	t.writeBaseTemplateFile("collections base file", BASE_TEMPLATE_COLLECTIONS, t.PackageName+"Collections.go", false)
-	t.writeBaseTemplateFile("collections base file", BASE_TEMPLATE_FORMS, t.PackageName+"Forms.go", false)
+	t.writeBaseTemplateFile("main base file", BASE_TEMPLATE, t.PackageName+"_pgtogogen_base.go", true)
+	t.writeBaseTemplateFile("db settings base file", BASE_TEMPLATE_SETTINGS, t.PackageName+"_pgtogogen_db.go", false)
+	t.writeBaseTemplateFile("collections base file", BASE_TEMPLATE_COLLECTIONS, t.PackageName+"_pgtogogen_coll.go", false)
+	t.writeBaseTemplateFile("collections base file", BASE_TEMPLATE_FORMS, t.PackageName+"_pgtogogen_forms.go", false)
+	t.writeBaseTemplateFile("collections base file", BASE_TRANSACTIONS, t.PackageName+"_pgtogogen_tx.go", false)
+	t.writeBaseTemplateFile("collections base file", BASE_DB_TYPES, t.PackageName+"_pgtogogen_types.go", false)
+	t.writeBaseTemplateFile("collections base file", BASE_BULK_COPY, t.PackageName+"_pgtogogen_copy.go", false)
 
 }
 

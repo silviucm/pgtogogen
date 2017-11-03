@@ -646,6 +646,14 @@ func (tbl *Table) GenerateInsertFunctions() {
 
 }
 
+func (tbl *Table) GenerateBulkCopyFunctions() {
+
+	tbl.generateAndAppendTemplate("tableBulkCopyTemplate", TABLE_STATIC_BULK_COPY_TEMPLATE, "")
+
+	fmt.Println("Table bulk copy functions generated.")
+
+}
+
 func (tbl *Table) GenerateUpdateFunctions() {
 
 	tbl.generateAndAppendTemplate("tableUpdateFunctionTemplate", TABLE_STATIC_UPDATE_TEMPLATE, "")
