@@ -22,20 +22,30 @@ import (
 // CopyFromReaderOptions allows customizing the parsing of the bulk copy
 // line input when using CopyFromReader.
 type CopyFromReaderOptions struct {
+	// when not 0, Comment allows skipping lines that start with it (no whitespace allowed before it)
+	Comment rune 
+	
 	Separator rune
-	NullPlaceholder *string
-	IncludePKCols bool // if true, include the PK columns when explicit columns are not specified
+	NullPlaceholders []string
+	
+	// if true, include the PK columns when explicit columns are not specified
+	IncludePKCols bool 
 }
 
-func NewCopyFromReaderOptions(separator rune, nullPlaceholder *string, includePKCols bool) *CopyFromReaderOptions {
+// NewCopyFromReaderOptions instantiates a new *CopyFromReaderOptions with
+// the provided options.
+func NewCopyFromReaderOptions(separator rune, nullPlaceholders []string, 
+				comment rune, includePKCols bool) *CopyFromReaderOptions {
 	return &CopyFromReaderOptions{
+		Comment: comment,
 		Separator: separator, 
-		NullPlaceholder: nullPlaceholder,
+		NullPlaceholders: nullPlaceholders,
 		IncludePKCols: includePKCols,
 	}	 
 }
 
-var defNullPlaceholder = ""
+var defCommentRune rune = ZeroRune
+var defNullPlaceholders = [2]string {"[null]","[nil]"}
 var defSeparator rune = ','
 var defIncludePKCols = false
 
@@ -63,8 +73,9 @@ var defIncludePKCols = false
 // Example of usage for a table with the above-mentioned columns
 // imported from a comma-separated reader:
 //
-//  nullChar := "[!null]"
-//	copySourceReader, err := CopyFromReader(r, CommaSeparator, &nullChar, "varchar", "integer", "jsonb","text","bool","date")
+//  nullVals := []string {"[!null]"}
+//	copySourceReader, err := CopyFromReader(r, CommaSeparator, nullVals, ZeroRune,
+// 								"varchar", "integer", "jsonb","text","bool","date")
 //	if err != nil {
 //		return err
 //	}
@@ -74,26 +85,32 @@ var defIncludePKCols = false
 //		return err
 //	}
 //	fmt.Println("Records copied:",copyCount)
-func CopyFromReader(rdr io.Reader, separator rune, nullPlaceholder *string, dbtypes ...string) (pgx.CopyFromSource, error) {
+func CopyFromReader(rdr io.Reader, separator rune, nullPlaceholders []string, 
+		commentRune rune, dbtypes ...string) (pgx.CopyFromSource, error) {
 
 	if len(dbtypes) == 0 {
 		return nil, fmt.Errorf("CopyFromReader: Missing db types definitions")
 	}
 	c := &copyFromReader{
-		lineReader:         csv.NewReader(rdr),
-		separator:          separator,
-		nullPlaceholder:    *nullPlaceholder,
-		useNullPlaceholder: (nullPlaceholder != nil),
-		idx:                -1,
-		dbtypes:            dbtypes,
+		lineReader:        		csv.NewReader(rdr),
+		separator:         		separator,
+		comment:				commentRune,
+		nullPlaceholders:    	nullPlaceholders,
+		useNullPlaceholders: 	(nullPlaceholders != nil && len(nullPlaceholders) > 0),
+		idx:                	-1,
+		dbtypes:            	dbtypes,
 	}
 	c.lineReader.Comma = separator
+	c.lineReader.Comment = commentRune
 	c.lineReader.LazyQuotes = true
 	c.lineReader.TrimLeadingSpace = true
 	c.lineReader.FieldsPerRecord = len(dbtypes)
 
 	return c, nil
 }
+
+// ZeroRune is the rune constant for the (default) 0 value
+const ZeroRune rune = 0
 
 // CommaSeparator is the rune constant for the comma character. It can be supplied
 // to CopyFromReader as the separator rune for comma-separated values.
@@ -108,14 +125,15 @@ var bEmptyStringSingleQuotes = []byte("''")
 var bDotComparatorSlice = []byte(".")
 
 type copyFromReader struct {
-	lineReader         *csv.Reader
-	separator          rune
-	useNullPlaceholder bool
-	nullPlaceholder    string
-	idx                int
-	dbtypes            []string
-	currRowErr         error
-	currRow            []string
+	lineReader         		*csv.Reader
+	separator				rune
+	comment			    	rune
+	useNullPlaceholders 	bool
+	nullPlaceholders		[]string
+	idx                		int
+	dbtypes            		[]string
+	currRowErr         		error
+	currRow            		[]string
 }
 
 func (ctr *copyFromReader) Next() bool {
@@ -144,14 +162,14 @@ func (ctr *copyFromReader) Values() ([]interface{}, error) {
 	outputValues := make([]interface{}, len(ctr.currRow))
 	for i := range ctr.currRow {
 		// Treat zero-length as null value is null placeholder happens to be the empty string
-		if len(ctr.currRow[i]) == 0 && ctr.useNullPlaceholder && ctr.nullPlaceholder == "" {
+		if len(ctr.currRow[i]) == 0 && ctr.useNullPlaceholders && ctr.isNullPlaceholder("") {
 			typeInstance := ctr.getPgTypeInstanceWithStatus(ctr.dbtypes[i], false)
 			outputValues[i] = typeInstance
 			continue
 		}
 
 		// Null placeholder match: treat it as null
-		if ctr.useNullPlaceholder && ctr.nullPlaceholder == ctr.currRow[i] {
+		if ctr.useNullPlaceholders && ctr.isNullPlaceholder(ctr.currRow[i]) {
 			typeInstance := ctr.getPgTypeInstanceWithStatus(ctr.dbtypes[i], false)
 			outputValues[i] = typeInstance
 			continue
@@ -159,7 +177,7 @@ func (ctr *copyFromReader) Values() ([]interface{}, error) {
 
 		// For non-text types, trim any right whitespace left and if the trimmed result
 		// is zero-length, assume null
-		if ctr.dbtypes[i] != "varchar" && ctr.dbtypes[i] != "text" {
+		if ctr.dbtypes[i] != "varchar" && ctr.dbtypes[i] != "text" && ctr.dbtypes[i] != "character varying" {
 			ctr.currRow[i] = strings.TrimRight(ctr.currRow[i], " ")
 			if len(ctr.currRow[i]) == 0 {
 				typeInstance := ctr.getPgTypeInstanceWithStatus(ctr.dbtypes[i], false)
@@ -228,6 +246,18 @@ func (ctr *copyFromReader) Values() ([]interface{}, error) {
 
 func (ctr *copyFromReader) Err() error {
 	return ctr.currRowErr
+}
+
+func (ctr *copyFromReader) isNullPlaceholder(v string) bool {
+	if len(ctr.nullPlaceholders) == 0 {
+		return false
+	}
+	for i := range ctr.nullPlaceholders {
+		if ctr.nullPlaceholders[i] == v {
+			return true
+		}
+	}
+	return false
 }
 
 func (ctr *copyFromReader) getPgTypeInstanceWithStatus(dbtype string, present bool) pgtype.Value {
@@ -461,15 +491,18 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(r io.Reader, opt *Co
 	}
 	
 	var optSeparator rune
-	var optNullPlaceholder *string
+	var optNullPlaceholders []string
+	var optComment rune
 	var optIncludePKCols bool
 	if opt == nil {
 		optSeparator = defSeparator
-		optNullPlaceholder = &defNullPlaceholder
+		optNullPlaceholders = defNullPlaceholders[:]
+		optComment = defCommentRune
 		optIncludePKCols = defIncludePKCols
 	} else {
 		optSeparator = opt.Separator
-		optNullPlaceholder = opt.NullPlaceholder	
+		optNullPlaceholders = opt.NullPlaceholders
+		optComment = opt.Comment
 		optIncludePKCols = opt.IncludePKCols	
 	}
 	
@@ -497,11 +530,11 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(r io.Reader, opt *Co
 		// Range through the custom columns and obtain the db name and db type
 		for i := range columns {	
 			colDbNames = append(colDbNames, Tables.{{.GoFriendlyName}}.ToDbFieldName(columns[i]))
-			colDbTypes = append(colDbNames, Tables.{{.GoFriendlyName}}.ToDbFieldTypeFromColName(columns[i]))						
+			colDbTypes = append(colDbTypes, Tables.{{.GoFriendlyName}}.ToDbFieldTypeFromColName(columns[i]))						
 		}
 	}
 	
-	copySourceReader, err := CopyFromReader(r, optSeparator, optNullPlaceholder, colDbTypes...)
+	copySourceReader, err := CopyFromReader(r, optSeparator, optNullPlaceholders, optComment, colDbTypes...)
 	if err != nil {
 		return 0, err
 	}
