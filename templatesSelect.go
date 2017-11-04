@@ -58,6 +58,48 @@ const COMMON_CODE_SELECT_TEMPLATE_WHERE_ATOMIC = `
 	rows, err := currentDbHandle.Query(JoinStringParts(queryParts,""), params...)	
 ` + COMMON_CODE_SELECT_QUERY_WHERE
 
+const COMMON_CODE_SELECT_UNION_TEMPLATE_WHERE_ATOMIC = `
+	if len(conditions) == 0 {
+		return nil, NewModelsErrorLocal(errorPrefix, "the number of conditions cannot be zero")
+	}
+	
+	currentDbHandle := GetDb()
+	if currentDbHandle == nil {
+		return nil, NewModelsErrorLocal(errorPrefix, "the database handle is nil")
+	}
+
+	// define the select query
+	var queryParts []string
+	
+	lcMinusOne := len(conditions) - 1
+	for cIdx := range conditions {
+		if conditions[cIdx] == "" {
+			return nil, NewModelsErrorLocal(errorPrefix, "No condition specified. Please use SelectAll method to select all rows from cms_tag")
+		}
+		queryParts = append(queryParts, "{{.GenericSelectQuery}} WHERE ")
+		queryParts = append(queryParts, conditions[cIdx])
+		if cIdx != lcMinusOne {
+			if isUnionAll {
+				queryParts = append(queryParts, " UNION ALL ")
+			} else {
+				queryParts = append(queryParts, " UNION ")
+			}
+		}
+	}
+
+	// Append the "order by" if not empty
+	if orderBy != "" {
+		queryParts = append(queryParts, " ORDER BY ", orderBy)
+	}
+
+	// Append the "limit" if greater than zero
+	if limit > 0 {
+		queryParts = append(queryParts, " LIMIT ", Itoa(limit))
+	}	
+		
+	rows, err := currentDbHandle.Query(JoinStringParts(queryParts,""), params...)	
+` + COMMON_CODE_SELECT_QUERY_WHERE
+
 const COMMON_CODE_SELECT_TEMPLATE_WHERE_ATOMIC_PAGED = `
 	currentDbHandle := GetDb()
 	if currentDbHandle == nil {
@@ -193,6 +235,64 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(condition string, pa
 	}
 	
 	` + COMMON_CODE_SELECT_TEMPLATE_WHERE_ATOMIC + `		
+	
+	return sliceOf{{.GoFriendlyName}}, nil
+}
+
+{{$colCount := len .Columns}}
+{{$functionName := "SelectUnion"}}{{$sourceStructName := print "source" .GoFriendlyName}}
+// {{$functionName}} performs a union between select queries from {{.DbName}}, 
+// corresponding to the supplied condition  and their respective parameter sets.
+// The conditions must not include the WHERE keyword, and they must keep track
+// of the parameter placeholder. For example, if conditions[0] references
+// "$1", "$2", and "$3", conditions[1] cannot reuse those, and must start at "$4".
+//
+// If orderBy is not empty, it will be appended at the end of the union 
+// statement (do not include the "ORDER BY keyword").
+//
+// If limit is greater than 0, it will be appended at the end of the
+// statement.
+//
+// This version is not cached and calls the database directly.
+// The rows are converted to a slice of {{.GoFriendlyName}} instances
+// If operation fails, it returns nil and the error.
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(conditions []string, 
+		orderBy string, limit int, params ...interface{}) ([]{{.GoFriendlyName}}, error) {
+						
+	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
+	
+	var isUnionAll = false
+	
+	` + COMMON_CODE_SELECT_UNION_TEMPLATE_WHERE_ATOMIC + `		
+	
+	return sliceOf{{.GoFriendlyName}}, nil
+}
+
+{{$colCount := len .Columns}}
+{{$functionName := "SelectUnionAll"}}{{$sourceStructName := print "source" .GoFriendlyName}}
+// {{$functionName}} performs a union between select queries from {{.DbName}}, 
+// corresponding to the supplied condition  and their respective parameter sets.
+// The conditions must not include the WHERE keyword, and they must keep track
+// of the parameter placeholder. For example, if conditions[0] references
+// "$1", "$2", and "$3", conditions[1] cannot reuse those, and must start at "$4".
+//
+// If orderBy is not empty, it will be appended at the end of the union 
+// statement (do not include the "ORDER BY keyword").
+//
+// If limit is greater than 0, it will be appended at the end of the
+// statement.
+//
+// This version is not cached and calls the database directly.
+// The rows are converted to a slice of {{.GoFriendlyName}} instances
+// If operation fails, it returns nil and the error.
+func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(conditions []string, 
+		orderBy string, limit int, params ...interface{}) ([]{{.GoFriendlyName}}, error) {
+						
+	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
+
+	var isUnionAll = true
+	
+	` + COMMON_CODE_SELECT_UNION_TEMPLATE_WHERE_ATOMIC + `		
 	
 	return sliceOf{{.GoFriendlyName}}, nil
 }
