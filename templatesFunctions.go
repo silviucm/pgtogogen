@@ -8,7 +8,7 @@ const FUNCTION_TEMPLATE_PREFIX = `package {{.Options.PackageName}}
 /* *********************************************************** */
 
 import (
-	"github.com/silviucm/pgtogogen/internal/pgx"
+	pgx "{{.Options.PgxImport}}"
 	{{range $key, $value := .GoTypesToImport}}"{{$value}}"
 	{{end}}	
 )

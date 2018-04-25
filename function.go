@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"database/sql"
 	"fmt"
 	"log"
 	"strings"
@@ -98,8 +99,13 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 
 	err := t.ConnectionPool.QueryRow(functionDetailsQuery, functionName, t.DbSchema, t.DbSchema, t.DbName, functionName).Scan(&routineName, &routineDataType, &routineUdtName, &isSetOf)
 
-	if err != nil {
-		log.Fatal("CollectFunction() fatal error running the QueryRow:", err)
+	switch {
+	case err == sql.ErrNoRows:
+		log.Println("CollectFunction(): function ", functionName, " no rows returned from information_schema.routines. Skipping.")
+		return nil, nil
+	case err != nil:
+		return nil, err
+	default:
 	}
 
 	// create a function holder struct

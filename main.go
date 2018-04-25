@@ -11,7 +11,8 @@ import (
 const ARGS_ERROR_HEADER string = "\n-------------------------\nARGUMENTS ERROR:\n-------------------------\n"
 
 var dbHost, dbPort, dbName, dbUser, dbPass, dbSchema, outputFolder, packageName *string
-var createFolderIfNotExists, generatePKGetters, generateUQGetters, generateGuidGetters *bool
+var createFolderIfNotExists *bool
+var generateFunctions, generatePKGetters, generateUQGetters, generateGuidGetters *bool
 
 var dbPortUInt16 uint16 = 5432
 
@@ -37,6 +38,7 @@ func main() {
 	packageName = flag.String("pkg", "models", "the package name for the generated files")
 
 	// output settings
+	generateFunctions = flag.Bool("fn", false, "generate functions, defaults to false")
 	generatePKGetters = flag.Bool("pk", true, "generate pk get methods, defaults to true")
 	generateUQGetters = flag.Bool("uq", true, "generate unique constraints get methods, defaults to true")
 	generateGuidGetters = flag.Bool("guid", true, "generate guid columns select methods, defaults to true")
@@ -64,6 +66,7 @@ func main() {
 		CreateFolderIfNotExists: *createFolderIfNotExists,
 		PackageName:             *packageName,
 
+		GenerateFunctions:   *generateFunctions,
 		GeneratePKGetters:   *generatePKGetters,
 		GenerateUQGetters:   *generateUQGetters,
 		GenerateGuidGetters: *generateGuidGetters}

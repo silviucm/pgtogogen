@@ -73,7 +73,13 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableT
 			nullableTypeReturn = NULLABLE_TYPE_FLOAT64
 		}
 
-	case "int32", "integer", "serial":
+	case "int2", "smallint":
+		typeReturn = "int16"
+		if nullable {
+			nullableTypeReturn = NULLABLE_TYPE_INT16
+		}
+
+	case "int4", "int32", "integer", "serial":
 		typeReturn = "int32"
 		if nullable {
 			nullableTypeReturn = NULLABLE_TYPE_INT32
@@ -107,7 +113,7 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableT
 			nullableTypeReturn = NULLABLE_TYPE_UUID
 		}
 
-	case "bigint", "bigserial", "int64":
+	case "int8", "bigint", "bigserial", "int64":
 		typeReturn = "int64"
 		if nullable {
 			nullableTypeReturn = NULLABLE_TYPE_INT64
@@ -145,9 +151,11 @@ func GetGoTypeNullableType(goType string) string {
 		return NULLABLE_TYPE_FLOAT32
 	case "float64":
 		return NULLABLE_TYPE_FLOAT64
-	case "int32", "integer", "serial":
+	case "int2", "smallint":
+		return NULLABLE_TYPE_INT16
+	case "int4", "int32", "integer", "serial":
 		return NULLABLE_TYPE_INT32
-	case "int64", "bigserial", "bigint":
+	case "int8", "int64", "bigserial", "bigint":
 		return NULLABLE_TYPE_INT64
 	case "JSONString":
 		return NULLABLE_TYPE_JSON

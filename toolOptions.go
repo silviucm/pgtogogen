@@ -32,6 +32,7 @@ type ToolOptions struct {
 	PgxImport    string // (the full import path e.g. "github.com/jackc/pgx")
 	PgTypeImport string // (the full import path e.g. "github.com/jackc/pgx/pgtype")
 
+	GenerateFunctions   bool
 	GeneratePKGetters   bool
 	GenerateUQGetters   bool
 	GenerateGuidGetters bool
@@ -133,10 +134,15 @@ func (t *ToolOptions) Collect() {
 	if t.DbMajorVersion <= 9 && t.DbMinorVersion < 4 {
 		fmt.Print("SKIPPING Collecting functions because Postgres versions before 9.4 do not suport parameter_default inside the informaion schema parameters view.\nFor more details see:\nhttps://www.postgresql.org/docs/9.5/static/infoschema-parameters.html\n")
 	} else {
-		fmt.Print("Collecting functions...")
-		if err := t.CollectFunctions(); err != nil {
-			log.Fatal("Collect(): CollectFunctions fatal error: ", err)
+		if t.GenerateFunctions {
+			fmt.Print("Collecting functions...")
+			if err := t.CollectFunctions(); err != nil {
+				log.Fatal("Collect(): CollectFunctions fatal error: ", err)
+			}
+		} else {
+			fmt.Println("Skipping collecting functions...")
 		}
+
 	}
 
 }
@@ -693,6 +699,8 @@ func (t *ToolOptions) CollectFunctions() error {
 			WHERE r.routine_schema=$1 AND routine_catalog=$2 AND r.routine_type = 'FUNCTION'
 			ORDER BY r.routine_name;`
 
+	// log.Printf("Collect functions main query:\n%s\nwith schema: %s and catalog: %s", functionNamesQuery, t.DbSchema, t.DbName)
+
 	rows, err := t.ConnectionPool.Query(functionNamesQuery, t.DbSchema, t.DbName)
 
 	if err != nil {
@@ -709,7 +717,8 @@ func (t *ToolOptions) CollectFunctions() error {
 		// instantiate a function struct and also collect all the necessary information
 		currentFunction, err := CollectFunction(t, currentFunctionName)
 		if err != nil {
-			log.Fatal("CollectFunctions fatal error inside a CollectFunction() routine: ", err)
+			log.Printf("CollectFunctions(\"%s\") error: %s\n", currentFunctionName, err.Error())
+			continue
 		}
 
 		// add the function to the slice if not nil
