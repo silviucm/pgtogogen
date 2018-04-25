@@ -166,6 +166,12 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 				newFunction.GoTypesToImport[goTypeToImport] = goTypeToImport
 			}
 
+			if correspondingGoType == "" {
+				// empty go type, means type could not be identified
+				log.Printf("CollectFunction(\"%s\"): unable to identify Go type for type: %s. Skipping.", functionName, routineDataType)
+				return nil, nil
+			}
+
 			newFunction.ReturnGoType = correspondingGoType
 			newFunction.ReturnNullableType = nullableType
 		}
