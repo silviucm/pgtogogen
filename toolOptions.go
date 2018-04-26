@@ -707,7 +707,7 @@ func (t *ToolOptions) CollectFunctions() error {
 			WHERE r.routine_schema=$1 AND routine_catalog=$2 AND r.routine_type = 'FUNCTION'
 			ORDER BY r.routine_name;`
 
-	log.Printf("Collect functions main query:\n%s\nwith schema: %s and catalog: %s", functionNamesQuery, t.DbSchema, t.DbName)
+	// log.Printf("Collect functions main query:\n%s\nwith schema: %s and catalog: %s", functionNamesQuery, t.DbSchema, t.DbName)
 
 	rows, err := t.ConnectionPool.Query(functionNamesQuery, t.DbSchema, t.DbName)
 
