@@ -9,12 +9,16 @@ const FUNCTION_TEMPLATE_PREFIX = `package {{.Options.PackageName}}
 
 import (
 	pgx "{{.Options.PgxImport}}"
+	pgtype "{{.Options.PgTypeImport}}"
 	{{range $key, $value := .GoTypesToImport}}"{{$value}}"
 	{{end}}	
 )
 
 // this is a dummy variable, just to use the pgx package
 var pgxErrDeadConnFunc = pgx.ErrDeadConn
+
+// this is a dummy variable, just to use the pgtypes package
+const pgtypesDummyFnPlaceholder = pgtype.Present
 
 // Utility-oriented, internal type to allow a singleton structure that would hold static-like methods
 // and global, single-instance settings

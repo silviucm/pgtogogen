@@ -694,12 +694,20 @@ ORDER BY
 func (t *ToolOptions) CollectFunctions() error {
 
 	var currentFunctionName string
+	var currentFunctionSpecificName string
 
-	var functionNamesQuery string = `SELECT r.routine_name FROM information_schema.routines r
+	var duplicateFuncNameMap map[string]int = make(map[string]int)
+
+	// The routine_name column is the "friendly" name (not guaranteed to be unique).
+	// The specific_name is the unique name.
+	// e.g. a hello_world function with multiple signatures, would have the
+	// "hello_world" value in the routing_name column for all records, but unique,
+	// number-prefixed names (such as "hello_world_18534") in the specific_name field.
+	var functionNamesQuery string = `SELECT r.routine_name, r.specific_name FROM information_schema.routines r
 			WHERE r.routine_schema=$1 AND routine_catalog=$2 AND r.routine_type = 'FUNCTION'
 			ORDER BY r.routine_name;`
 
-	// log.Printf("Collect functions main query:\n%s\nwith schema: %s and catalog: %s", functionNamesQuery, t.DbSchema, t.DbName)
+	log.Printf("Collect functions main query:\n%s\nwith schema: %s and catalog: %s", functionNamesQuery, t.DbSchema, t.DbName)
 
 	rows, err := t.ConnectionPool.Query(functionNamesQuery, t.DbSchema, t.DbName)
 
@@ -709,13 +717,16 @@ func (t *ToolOptions) CollectFunctions() error {
 	defer rows.Close()
 
 	for rows.Next() {
-		err := rows.Scan(&currentFunctionName)
+		err := rows.Scan(&currentFunctionName, &currentFunctionSpecificName)
 		if err != nil {
 			log.Fatal("CollectFunctions fatal error inside rows.Next() iteration: ", err)
 		}
 
+		count := duplicateFuncNameMap[currentFunctionName]
+		count = count + 1
+
 		// instantiate a function struct and also collect all the necessary information
-		currentFunction, err := CollectFunction(t, currentFunctionName)
+		currentFunction, err := CollectFunction(t, currentFunctionName, currentFunctionSpecificName, count)
 		if err != nil {
 			log.Printf("CollectFunctions(\"%s\") error: %s\n", currentFunctionName, err.Error())
 			continue
@@ -724,6 +735,8 @@ func (t *ToolOptions) CollectFunctions() error {
 		// add the function to the slice if not nil
 		if currentFunction != nil {
 			t.Functions = append(t.Functions, *currentFunction)
+			// Update the duplicate count
+			duplicateFuncNameMap[currentFunctionName] = count
 		}
 
 	}

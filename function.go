@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -19,6 +20,7 @@ type Function struct {
 	ConnectionPool *pgx.ConnPool
 
 	DbName         string
+	DbSpecificName string // The guaranteed unique function name
 	GoFriendlyName string
 	DbComments     string
 
@@ -66,7 +68,8 @@ const (
 
 var FunctionFileGoTypesToImport map[string]string = make(map[string]string)
 
-func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
+func CollectFunction(t *ToolOptions, functionName string, specificName string,
+	duplicateCount int) (*Function, error) {
 
 	// for more info, check this url
 	// http://www.alberton.info/postgresql_meta_info.html
@@ -89,7 +92,7 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 		AND pg_catalog.pg_function_is_visible(pg_proc.oid) 
 		LIMIT 1
 		) as proc_details
-		WHERE r.routine_schema=$3 AND routine_catalog=$4 AND r.routine_name=$5 
+		WHERE r.routine_schema=$3 AND routine_catalog=$4 AND r.specific_name=$5 
 		AND r.routine_type = 'FUNCTION' 
 		AND proc_details.proname = r.routine_name
 		ORDER BY r.routine_name;`
@@ -97,7 +100,7 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 	var routineName, routineDataType, routineUdtName string
 	var isSetOf bool = false
 
-	err := t.ConnectionPool.QueryRow(functionDetailsQuery, functionName, t.DbSchema, t.DbSchema, t.DbName, functionName).Scan(&routineName, &routineDataType, &routineUdtName, &isSetOf)
+	err := t.ConnectionPool.QueryRow(functionDetailsQuery, functionName, t.DbSchema, t.DbSchema, t.DbName, specificName).Scan(&routineName, &routineDataType, &routineUdtName, &isSetOf)
 
 	switch {
 	case err == sql.ErrNoRows:
@@ -113,10 +116,15 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 		ConnectionPool:    t.ConnectionPool,
 		Options:           t,
 		DbName:            routineName,
+		DbSpecificName:    specificName,
 		GoFriendlyName:    GetGoFriendlyNameForFunction(routineName),
 		IsReturnASet:      isSetOf,
 		IsReturnARecord:   (isSetOf == false),
 		GeneratedTemplate: bytes.Buffer{},
+	}
+
+	if duplicateCount > 1 {
+		newFunction.GoFriendlyName = newFunction.GoFriendlyName + "_" + strconv.Itoa(duplicateCount)
 	}
 
 	// determine if the return type is user defined or standard postgres type
@@ -164,6 +172,10 @@ func CollectFunction(t *ToolOptions, functionName string) (*Function, error) {
 				}
 
 				newFunction.GoTypesToImport[goTypeToImport] = goTypeToImport
+
+				// For now, since we use a single template file for all the functions,
+				// use a global map
+				FunctionFileGoTypesToImport[goTypeToImport] = goTypeToImport
 			}
 
 			if correspondingGoType == "" {
@@ -194,12 +206,12 @@ func (f *Function) CollectParameters() {
 		SELECT p.parameter_name, p.data_type, p.parameter_mode, p.parameter_default, p.ordinal_position
 		FROM information_schema.routines r
 		    JOIN information_schema.parameters p ON r.specific_name=p.specific_name
-		WHERE r.routine_schema=$1 AND r.routine_catalog=$2 AND r.routine_name=$3 
+		WHERE r.routine_schema=$1 AND r.routine_catalog=$2 AND r.specific_name=$3 
 		AND r.routine_type = 'FUNCTION' 
 		ORDER BY r.routine_name, p.ordinal_position;
 	`
 
-	rows, err := f.ConnectionPool.Query(paramsQuery, f.Options.DbSchema, f.Options.DbName, f.DbName)
+	rows, err := f.ConnectionPool.Query(paramsQuery, f.Options.DbSchema, f.Options.DbName, f.DbSpecificName)
 
 	if err != nil {
 		log.Fatal("CollectParameters() fatal error running the query:", err)

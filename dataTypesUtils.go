@@ -14,6 +14,7 @@ const (
 	NULLABLE_TYPE_INT16        = "pgtype.Int2"
 	NULLABLE_TYPE_INT32        = "pgtype.Int4"
 	NULLABLE_TYPE_INT64        = "pgtype.Int8"
+	NULLABLE_TYPE_INTERVAL     = "pgtype.Interval"
 	NULLABLE_TYPE_JSON         = "JSON"
 	NULLABLE_TYPE_JSONB        = "JSONB"
 	NULLABLE_TYPE_NUMERIC      = "pgtype.Numeric"
@@ -83,6 +84,12 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableT
 		typeReturn = "int32"
 		if nullable {
 			nullableTypeReturn = NULLABLE_TYPE_INT32
+		}
+
+	case "interval":
+		typeReturn = NULLABLE_TYPE_INTERVAL
+		if nullable {
+			nullableTypeReturn = NULLABLE_TYPE_INTERVAL
 		}
 
 	// We need to make sure have a "JSON" type embedding pgtypes.JSON
