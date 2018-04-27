@@ -49,11 +49,16 @@ type View struct {
 
 func (v *View) CollectColumns() error {
 
-	var currentColumnName, isNullable, dataType string
+	var currentColumnName, isNullable string
 	var columnDefault pgtype.Text
 	var charMaxLength pgtype.Int4
 
-	rows, err := v.ConnectionPool.Query("SELECT column_name, column_default, is_nullable, data_type, character_maximum_length FROM information_schema.columns "+
+	// For fixed length arrays (e.g. character[]) we cannot infer the data type just
+	// from the data_type column. That will contain "ARRAY" and udt_name will contain
+	// the specific type (e.g. "_bpchar" for character[])
+	var dataType, udtName string
+
+	rows, err := v.ConnectionPool.Query("SELECT column_name, column_default, is_nullable, data_type, udt_name, character_maximum_length FROM information_schema.columns "+
 		" WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position;", v.DbName)
 
 	if err != nil {
@@ -62,13 +67,13 @@ func (v *View) CollectColumns() error {
 	defer rows.Close()
 
 	for rows.Next() {
-		err := rows.Scan(&currentColumnName, &columnDefault, &isNullable, &dataType, &charMaxLength)
+		err := rows.Scan(&currentColumnName, &columnDefault, &isNullable, &dataType, &udtName, &charMaxLength)
 		if err != nil {
 			log.Fatal("View.CollectColumns() fatal error inside rows.Next() iteration: ", err)
 		}
 
 		nullable := DecodeNullable(isNullable)
-		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(dataType, nullable)
+		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(dataType, nullable, udtName)
 
 		if goTypeToImport != "" {
 			if v.GoTypesToImport == nil {
@@ -146,7 +151,7 @@ AND    NOT attisdropped;
 		}
 
 		nullable := DecodeNullable(isNullable)
-		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(dataType, nullable)
+		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(dataType, nullable, "")
 
 		if goTypeToImport != "" {
 			if v.GoTypesToImport == nil {

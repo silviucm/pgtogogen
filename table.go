@@ -61,13 +61,19 @@ type Table struct {
 
 func (tbl *Table) CollectColumns() error {
 
-	var currentColumnName, isNullable, dataType string
+	var currentColumnName, isNullable string
 	var columnDefault pgtype.Text
 	var charMaxLength pgtype.Int4
 	var ordinalPosition int
 
-	rows, err := tbl.ConnectionPool.Query("SELECT column_name, column_default, is_nullable, data_type, character_maximum_length, ordinal_position FROM information_schema.columns "+
-		" WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position;", tbl.DbName)
+	// For fixed length arrays (e.g. character[]) we cannot infer the data type just
+	// from the data_type column. That will contain "ARRAY" and udt_name will contain
+	// the specific type (e.g. "_bpchar" for character[])
+	var dataType, udtName string
+
+	columnQuery := "SELECT column_name, column_default, is_nullable, data_type, udt_name, character_maximum_length, ordinal_position FROM information_schema.columns " +
+		" WHERE table_schema = 'public' AND table_name = $1 ORDER BY ordinal_position;"
+	rows, err := tbl.ConnectionPool.Query(columnQuery, tbl.DbName)
 
 	if err != nil {
 		log.Fatal("CollectColumns() fatal error running the query:", err)
@@ -75,13 +81,17 @@ func (tbl *Table) CollectColumns() error {
 	defer rows.Close()
 
 	for rows.Next() {
-		err := rows.Scan(&currentColumnName, &columnDefault, &isNullable, &dataType, &charMaxLength, &ordinalPosition)
+		err := rows.Scan(&currentColumnName, &columnDefault, &isNullable, &dataType, &udtName, &charMaxLength, &ordinalPosition)
 		if err != nil {
 			log.Fatal("CollectColumns() fatal error inside rows.Next() iteration: ", err)
 		}
 
 		nullable := DecodeNullable(isNullable)
-		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(dataType, nullable)
+		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(dataType, nullable, udtName)
+
+		if resolvedGoType == "" {
+			log.Fatalf("FATAL: CollectColumns for table %s, column %s could not resolve type %s.\nQuery:\n%s\n", tbl.DbName, currentColumnName, dataType, columnQuery)
+		}
 
 		if goTypeToImport != "" {
 			if tbl.GoTypesToImport == nil {

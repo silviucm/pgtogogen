@@ -164,7 +164,7 @@ func CollectFunction(t *ToolOptions, functionName string, specificName string,
 			newFunction.ReturnType = routineDataType
 
 			// get the corresponding go type
-			correspondingGoType, nullableType, goTypeToImport := GetGoTypeForColumn(routineDataType, true)
+			correspondingGoType, nullableType, goTypeToImport := GetGoTypeForColumn(routineDataType, true, "")
 
 			if goTypeToImport != "" {
 				if newFunction.GoTypesToImport == nil {
@@ -224,7 +224,7 @@ func (f *Function) CollectParameters() {
 			log.Fatal("CollectParameters() fatal error inside rows.Next() iteration: ", err)
 		}
 
-		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(parameterDataType, false)
+		resolvedGoType, nullableType, goTypeToImport := GetGoTypeForColumn(parameterDataType, false, "")
 
 		if goTypeToImport != "" {
 			if f.GoTypesToImport == nil {

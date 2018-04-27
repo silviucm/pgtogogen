@@ -48,7 +48,12 @@ func GetGoFriendlyNameForColumn(columnName string) string {
 	return strings.Join(subNames, "")
 }
 
-func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableTypeReturn, goTypeToImport string) {
+// GetGoTypeForColumn identifies the proper Go type for the database type
+// specified in columnType. An additional udtName may be needed for array types, in
+// which case udtName is not empty. (e.g. character[] will come as columnType=ARRAY
+// and udtName=_bpchar).
+func GetGoTypeForColumn(columnType string, nullable bool, udtName string) (typeReturn,
+	nullableTypeReturn, goTypeToImport string) {
 
 	typeReturn = ""
 	goTypeToImport = ""
@@ -56,13 +61,21 @@ func GetGoTypeForColumn(columnType string, nullable bool) (typeReturn, nullableT
 
 	switch columnType {
 
+	case "ARRAY":
+		if udtName == "_bpchar" {
+			typeReturn = "string"
+			if nullable {
+				nullableTypeReturn = NULLABLE_TYPE_STRING
+			}
+		}
+
 	case "boolean":
 		typeReturn = "bool"
 		if nullable {
 			nullableTypeReturn = NULLABLE_TYPE_BOOL
 		}
 
-	case "character varying", "text":
+	case "character varying", "text", "character[]":
 		typeReturn = "string"
 		if nullable {
 			nullableTypeReturn = NULLABLE_TYPE_STRING
