@@ -230,7 +230,7 @@ func GetPostgresErrorCode(err error) string {
 // Debug logs the info using the runtime log package if debug mode is on.
 func Debug(v ...interface{}) {
 	if isDebugMode {
-		log.Println(v)
+		log.Println(v...)
 	}
 }
 
