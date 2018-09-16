@@ -151,9 +151,9 @@ const COMMON_CODE_SELECT_TEMPLATE_WHERE_CACHED_HEADER_NON_PAGED = `
 	var whereClauseHash string = ""
 	var hashErr error = nil	
 	
-	if cacheOption > FLAG_CACHE_DISABLE {
+	if cacheOption > PgToGoFlagCacheDisable {
 		
-		if cacheOption == FLAG_CACHE_USE || cacheOption == FLAG_CACHE_RELOAD {
+		if cacheOption == PgToGoFlagCacheUse || cacheOption == PgToGoFlagCacheReload {
 			
 			whereClauseHash, hashErr = GetHashFromConditionAndParams(condition, params...)
 			if hashErr != nil {
@@ -161,8 +161,8 @@ const COMMON_CODE_SELECT_TEMPLATE_WHERE_CACHED_HEADER_NON_PAGED = `
 			}			
 		}
 		
-		// check the caching options - in case it's FLAG_CACHE_USE and there is cache available no need to go further
-		if cacheOption == FLAG_CACHE_USE {
+		// check the caching options - in case it's PgToGoFlagCacheUse and there is cache available no need to go further
+		if cacheOption == PgToGoFlagCacheUse {
 						
 			// try to get the rows from cache, if enabled and valid
 			if current{{.GoFriendlyName}}RowsFromCache, cacheValid := utilRef.Cache.GetWhere(whereClauseHash) ; cacheValid == true {
@@ -177,9 +177,9 @@ const COMMON_CODE_SELECT_TEMPLATE_WHERE_CACHED_HEADER_PAGED = `
 	var whereClauseHash string = ""
 	var hashErr error = nil	
 
-	if cacheOption > FLAG_CACHE_DISABLE {
+	if cacheOption > PgToGoFlagCacheDisable {
 		
-		if cacheOption == FLAG_CACHE_USE || cacheOption == FLAG_CACHE_RELOAD {
+		if cacheOption == PgToGoFlagCacheUse || cacheOption == PgToGoFlagCacheReload {
 			
 			whereClauseHash, hashErr = GetHashFromConditionAndParams(condition, params...)
 			if hashErr != nil {
@@ -197,8 +197,8 @@ const COMMON_CODE_SELECT_TEMPLATE_WHERE_CACHED_HEADER_PAGED = `
 			
 		}
 		
-		// check the caching options - in case it's FLAG_CACHE_USE and there is cache available no need to go further
-		if cacheOption == FLAG_CACHE_USE {
+		// check the caching options - in case it's PgToGoFlagCacheUse and there is cache available no need to go further
+		if cacheOption == PgToGoFlagCacheUse {
 						
 			// try to get the rows from cache, if enabled and valid
 			if current{{.GoFriendlyName}}RowsFromCache, cacheValid := utilRef.Cache.GetWhere(whereClauseHash) ; cacheValid == true {
@@ -211,9 +211,9 @@ const COMMON_CODE_SELECT_TEMPLATE_WHERE_CACHED_HEADER_PAGED = `
 
 const COMMON_CODE_SELECT_TEMPLATE_WHERE_CACHED_FOOTER = `
 	// before returning the result, make sure to insert it into cache if instructed
-	if cacheOption > FLAG_CACHE_DISABLE && whereClauseHash != "" {
+	if cacheOption > PgToGoFlagCacheDisable && whereClauseHash != "" {
 		
-		if cacheOption != FLAG_CACHE_DELETE {			
+		if cacheOption != PgToGoFlagCacheDelete {			
 			utilRef.Cache.SetWhere(whereClauseHash, sliceOf{{.GoFriendlyName}})	
 		}
 	}
@@ -302,7 +302,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(conditions []string,
 // Returns the rows from {{.DbName}}, corresponding to the supplied condition 
 // and the respective parameters. The condition must not include the WHERE keyword.
 // The cacheOption parameter is one of the FLAG_CACHE_[behaviour] global integer constants.
-// FLAG_CACHE_DISABLE has a value of 0, and caching is completely bypassed.
+// PgToGoFlagCacheDisable has a value of 0, and caching is completely bypassed.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.
 func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(cacheOption int, condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
@@ -355,7 +355,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageNumber int, page
 // The pageSize parameter (must be greater than or equal to 1) indicates how many maximum records are to be returned.
 // If pageNumber is 1, there is no offset.
 // The cacheOption parameter is one of the FLAG_CACHE_[behaviour] global integer constants.
-// FLAG_CACHE_DISABLE has a value of 0, and caching is completely bypassed.
+// PgToGoFlagCacheDisable has a value of 0, and caching is completely bypassed.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.
 func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageNumber int, pageSize int, cacheOption int, condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
@@ -447,7 +447,7 @@ func (txWrapper *Transaction) {{$functionName}}(condition string, params ...inte
 // Returns the rows from {{.DbName}}, corresponding to the supplied condition 
 // and the respective parameters. The condition must not include the WHERE keyword.
 // The cacheOption parameter is one of the FLAG_CACHE_[behaviour] global integer constants.
-// FLAG_CACHE_DISABLE has a value of 0, and caching is completely bypassed.
+// PgToGoFlagCacheDisable has a value of 0, and caching is completely bypassed.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.
 func (txWrapper *Transaction) {{$functionName}}(cacheOption int, condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {
@@ -500,7 +500,7 @@ func (txWrapper *Transaction) {{$functionName}}(pageNumber int, pageSize int, co
 // The pageNumber parameter (must be greater than or equal to 1) indicates the page offset from the beginning of the resultset.
 // If pageNumber is 1, there is no offset.
 // The cacheOption parameter is one of the FLAG_CACHE_[behaviour] global integer constants.
-// FLAG_CACHE_DISABLE has a value of 0, and caching is completely bypassed.
+// PgToGoFlagCacheDisable has a value of 0, and caching is completely bypassed.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.
 func (txWrapper *Transaction) {{$functionName}}(pageSize int, pageNumber int, cacheOption int, condition string, params ...interface{}) ([]{{.GoFriendlyName}},  error) {

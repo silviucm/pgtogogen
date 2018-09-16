@@ -21,7 +21,8 @@ import (
 	"reflect"
 )
 
-// Interface to allow cache provider other than the default, in-memory cache
+// ICacheProvider is an interface that describes caching operations. It allows using a cache 
+// provider other than the default, in-memory cache
 type ICacheProvider interface {
 	Get(key string) (interface{}, error)
 	Set(key string, value interface{})
@@ -30,40 +31,53 @@ type ICacheProvider interface {
 
 // Caching flags to allow functions and methods be supplied with caching behaviour options
 const (
-	// do not use caching
-	FLAG_CACHE_DISABLE int = 0
+	// PgToGoFlagCacheDisable disables any caching
+	PgToGoFlagCacheDisable int = 0
 	
-	// if the cache is already there, use it, otherwise populate it from database
-	FLAG_CACHE_USE int = 1
+	// PgToGoFlagCacheUse uses the cache already present, otherwise populates data from database
+	PgToGoFlagCacheUse int = 1
 	
-	// forces the reload of the cache from the database
-	FLAG_CACHE_RELOAD int = 2
+	// PgToGoFlagCacheReload forces a cache refresh from the database
+	PgToGoFlagCacheReload int = 2
 	
-	// delete the cache entry and do not use it
-	FLAG_CACHE_DELETE int = 4
+	// PgToGoFlagCacheDelete forces the cached entry deletion, preventing further use
+	PgToGoFlagCacheDelete int = 4
 )
 
 
-// If this flag is set to true, the system will panic if the database
-// connection cannot be made. Otherwise, GetDb() will simply return nil.
-const FLAG_PANIC_ON_INIT_DB_FAIL bool = true
+// PgToGoOptionPanicOnInitDbErr defines the exit behaviour when, during a GetDb lazy-init,
+// the InitDatabase function attempts to connect to the datasource and fails. 
+// When set to true, the system panics. Otherwise, GetDb() will simply return nil.
+var PgToGoOptionPanicOnInitDbErr = true
 
 // variables that mimick the database driver standard errors, so
 // we don't need to import that package in the generated table-to-struct files
 // or any other package, such as pgx - the import would only reside here, in the base file
-
-var ErrNoRows = pgx.ErrNoRows
-var ErrDeadConn = pgx.ErrDeadConn
-var ErrTxClosed = pgx.ErrTxClosed
-var ErrNotificationTimeout = errors.New("notification timeout")
-
-var ErrTooManyRows =  errors.New("More than one row returned.")
+var (
+	// ErrNoRows occurs when rows are expected but none are returned.
+	ErrNoRows = pgx.ErrNoRows
+	
+	// ErrDeadConn occurs on an attempt to use a dead connection.
+	ErrDeadConn = pgx.ErrDeadConn
+	
+	// ErrTxClosed occurs on an attempt to use an already closed transaction.
+	ErrTxClosed = pgx.ErrTxClosed
+	
+	// ErrNotificationTimeout occurs in case of a notification timeout.
+	ErrNotificationTimeout = errors.New("notification timeout")
+	
+	// ErrTooManyRows occurs when a db query returns more than one row for an operation
+	// expecting one row at most.
+	ErrTooManyRows =  errors.New("More than one row returned")
+)
 
 // debug mode flag
-var isDebugMode bool = false
+var isDebugMode = false
 
 var dbHandle *pgx.ConnPool
 
+// GetDb returns the connection pool handle for the underlying data source.
+// If the handle is nil, it attempts a lazy initialization.
 func GetDb() *pgx.ConnPool {
 	
 	if dbHandle != nil {
@@ -74,20 +88,18 @@ func GetDb() *pgx.ConnPool {
 	newHandle, err := InitDatabase(dbSettings)
 	
 	if err != nil {
-		if FLAG_PANIC_ON_INIT_DB_FAIL {
+		if PgToGoOptionPanicOnInitDbErr {
 			panic("FORCED PANIC: models.GetDb() -> InitDatabase() fatal error connecting to the database: " + err.Error())
 		} else {
 			return nil
 		}
 	}
-
 	
 	dbHandle = newHandle	
-	return dbHandle
-	
+	return dbHandle	
 }
 
-// Returns a ConnPoolConfig structure.
+// GetDefaultDbSettings returns a ConnPoolConfig structure.
 func GetDefaultDbSettings() pgx.ConnPoolConfig {
 	
 	var config pgx.ConnPoolConfig
@@ -103,7 +115,11 @@ func GetDefaultDbSettings() pgx.ConnPoolConfig {
 	
 }
 
-// Minimally, the pgx.ConnPoolConfig expects these values to be set:
+// InitDatabase initializes the connection to the datasource using a pgx.ConnPoolConfig
+// instance. It then calls PrepareDbCollections to initialize the structures and set
+// default behaviours.
+//
+// At minimum, the pgx.ConnPoolConfig expects these values to be set:
 //
 // config.Host = dbHostStringVar
 // config.User = dbUserStringVar
@@ -131,6 +147,8 @@ func InitDatabase(dbConfig pgx.ConnPoolConfig) (*pgx.ConnPool, error) {
 
 }
 
+// InitDatabaseMinimal is a wrapper over InitDatabase, and allows direct values to be
+// specied for the database connection parameters.
 func InitDatabaseMinimal(host string, port uint16, user, pass, dbName string, poolMaxConnections int) (*pgx.ConnPool, error) {
 
 	DB_HOST = host
@@ -325,7 +343,7 @@ func GetHashFromConditionAndParams(condition string, params ...interface{}) (str
 	
 }
 
-// Wrapper over time package Now method
+// Now is a wrapper over the time package Now method.
 func Now() time.Time {
 	return time.Now()
 }
@@ -341,16 +359,17 @@ func NewGuid() string {
 	return uuid.NewV4().String()
 }
 
-// Wrapper over strconv package Itoa method
+// Itoa is a wrapper over strconv package Itoa method.
 func Itoa(intValue int) string {
 	return strconv.Itoa(intValue)
 }
 
+// Contains is a wrapper over the strings package Contains method.
 func Contains(source string, subStr string) bool {
 	return strings.Contains(source, subStr)
 }
 
-// Wrapper over strings.Join
+// JoinStringParts is a wrapper over strings.Join
 func JoinStringParts(sourceSlice []string, separator string) string {
 	return strings.Join(sourceSlice, separator)
 }
