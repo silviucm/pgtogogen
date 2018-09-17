@@ -34,7 +34,7 @@ type {{.GoFriendlyName}} struct {
 {{ $tableGoName := .GoFriendlyName}}
 /* Sorting helper containers */
 {{range $i, $e := .Columns}}
-// By{{$e.GoName}} implements sort.Interface for []{{$tableGoName}} based on
+// Sort{{$tableGoName}}By{{$e.GoName}} implements sort.Interface for []{{$tableGoName}} based on
 // the {{$e.GoName}} field. Usage: sort.Sort(Sort{{$tableGoName}}By{{$e.GoName}}(anyGiven{{$tableGoName}}Slice))
 type Sort{{$tableGoName}}By{{$e.GoName}} []{{$tableGoName}}
 
@@ -58,8 +58,8 @@ type t{{.GoFriendlyName}}Utils struct {
 
 {{if .IsMaterialized}}
 {{$functionName := "RefreshMaterializedView"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Refreshes the materialized view and updates it with the latest data from the underlying 
-// data entities
+// {{$functionName}} refreshes the materialized view and updates it with the latest data 
+// from the underlying data entities.
 func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}()  error {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
@@ -79,11 +79,11 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}()  error {
 }
 
 {{$functionNameConc := "RefreshMaterializedViewConcurrently"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Refreshes the materialized view concurrently, and updates it with the latest data from 
-// the underlying data entities. A concurrent refresh means that the view is accessible to reading
-// by other threads, but it may take longer than the non-concurrent operation. 
-// This refresh mode is only available in Postgres versions 9.4 and higher and it will fail unless at least one
-// unique index, without a WHERE clause is defined on the view
+// {{$functionName}} refreshes the materialized view concurrently, and updates it with the 
+// latest data from the underlying data entities. A concurrent refresh means that the view 
+// is accessible to reading by other threads, but it may take longer than the non-concurrent 
+// operation. This refresh mode is only available in Postgres versions 9.4 and higher and 
+// it will fail unless at least one unique index, without a WHERE clause is defined on the view.
 func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionNameConc}}()  error {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionNameConc}}() ERROR: "

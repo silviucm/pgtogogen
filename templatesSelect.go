@@ -221,7 +221,7 @@ const COMMON_CODE_SELECT_TEMPLATE_WHERE_CACHED_FOOTER = `
 
 const SELECT_TEMPLATE_WHERE = `{{$colCount := len .Columns}}
 {{$functionName := "Select"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Returns the rows from {{.DbName}}, corresponding to the supplied condition 
+// {{$functionName}} returns the rows from {{.DbName}}, corresponding to the supplied condition 
 // and the respective parameters. The condition must not include the WHERE keyword.
 // This version is not cached and calls the database directly.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
@@ -299,9 +299,9 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(conditions []string,
 
 {{$colCount := len .Columns}}
 {{$functionName := "SelectCached"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Returns the rows from {{.DbName}}, corresponding to the supplied condition 
+// {{$functionName}} returns the rows from {{.DbName}}, corresponding to the supplied condition 
 // and the respective parameters. The condition must not include the WHERE keyword.
-// The cacheOption parameter is one of the FLAG_CACHE_[behaviour] global integer constants.
+// The cacheOption parameter is one of the PgToGoFlagCache[behaviour] global integer constants.
 // PgToGoFlagCacheDisable has a value of 0, and caching is completely bypassed.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.
@@ -324,7 +324,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(cacheOption int, con
 
 {{$colCount := len .Columns}}
 {{$functionName := "SelectPage"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Returns the paginated rows from {{.DbName}}, corresponding to the supplied condition
+// {{$functionName}} returns the paginated rows from {{.DbName}}, corresponding to the supplied condition
 // and the respective numbered parameters. The condition must not include the WHERE keyword.
 // The pageNumber parameter (must be greater than or equal to 1) indicates the page offset from the beginning of the resultset.
 // The pageSize parameter (must be greater than or equal to 1) indicates how many maximum records are to be returned.
@@ -349,12 +349,12 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(pageNumber int, page
 
 {{$colCount := len .Columns}}
 {{$functionName := "SelectPageCached"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Returns the rows from {{.DbName}}, corresponding to the supplied condition 
+// {{$functionName}} returns the rows from {{.DbName}}, corresponding to the supplied condition 
 // and the respective numbered parameters. The condition must not include the WHERE keyword.
 // The pageNumber parameter (must be greater than or equal to 1) indicates the page offset from the beginning of the resultset.
 // The pageSize parameter (must be greater than or equal to 1) indicates how many maximum records are to be returned.
 // If pageNumber is 1, there is no offset.
-// The cacheOption parameter is one of the FLAG_CACHE_[behaviour] global integer constants.
+// The cacheOption parameter is one of the PgToGoFlagCache[behaviour] global integer constants.
 // PgToGoFlagCacheDisable has a value of 0, and caching is completely bypassed.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.
@@ -424,7 +424,7 @@ const COMMON_CODE_SELECT_TEMPLATE_WHERE_TRANSACTION_PAGED = `
 
 const SELECT_TEMPLATE_WHERE_TX = `{{$colCount := len .Columns}}
 {{$functionName := print "Select" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Returns the rows from {{.DbName}}, corresponding to the supplied condition 
+// {{$functionName}} returns the rows from {{.DbName}}, corresponding to the supplied condition 
 // and the respective parameters. The condition must not include the WHERE keyword.
 // This version is not cached and calls the database directly.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
@@ -444,9 +444,9 @@ func (txWrapper *Transaction) {{$functionName}}(condition string, params ...inte
 
 {{$colCount := len .Columns}}
 {{$functionName := print "SelectCached" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Returns the rows from {{.DbName}}, corresponding to the supplied condition 
+// {{$functionName}} returns the rows from {{.DbName}}, corresponding to the supplied condition 
 // and the respective parameters. The condition must not include the WHERE keyword.
-// The cacheOption parameter is one of the FLAG_CACHE_[behaviour] global integer constants.
+// The cacheOption parameter is one of the PgToGoFlagCache[behaviour] global integer constants.
 // PgToGoFlagCacheDisable has a value of 0, and caching is completely bypassed.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.
@@ -469,7 +469,7 @@ func (txWrapper *Transaction) {{$functionName}}(cacheOption int, condition strin
 
 {{$colCount := len .Columns}}
 {{$functionName := print "SelectPage" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Returns the paginated rows from {{.DbName}}, corresponding to the supplied condition 
+// {{$functionName}} returns the paginated rows from {{.DbName}}, corresponding to the supplied condition 
 // and the respective numbered parameters. The condition must not include the WHERE keyword.
 // The pageSize parameter (must be greater than or equal to 1) indicates how many maximum records are to be returned.
 // The pageNumber parameter (must be greater than or equal to 1) indicates the page offset from the beginning of the resultset.
@@ -494,12 +494,12 @@ func (txWrapper *Transaction) {{$functionName}}(pageNumber int, pageSize int, co
 
 {{$colCount := len .Columns}}
 {{$functionName := print "SelectPageCached" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Returns the paginated rows from {{.DbName}}, corresponding to the supplied condition 
+// {{$functionName}} returns the paginated rows from {{.DbName}}, corresponding to the supplied condition 
 // and the respective numbered parameters. The condition must not include the WHERE keyword.
 // The pageSize parameter (must be greater than or equal to 1) indicates how many maximum records are to be returned.
 // The pageNumber parameter (must be greater than or equal to 1) indicates the page offset from the beginning of the resultset.
 // If pageNumber is 1, there is no offset.
-// The cacheOption parameter is one of the FLAG_CACHE_[behaviour] global integer constants.
+// The cacheOption parameter is one of the PgToGoFlagCache[behaviour] global integer constants.
 // PgToGoFlagCacheDisable has a value of 0, and caching is completely bypassed.
 // The rows are converted to a slice of {{.GoFriendlyName}} instances
 // If operation fails, it returns nil and the error.

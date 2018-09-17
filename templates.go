@@ -77,7 +77,8 @@ type {{.GoFriendlyName}} struct {
 }
 
 {{ $tableGoName := .GoFriendlyName}}
-{{range .Columns}}func (t *{{$tableGoName}}) Set{{.GoName}}(val {{.GoType}} {{if .Nullable}}, notNull bool{{end}}) {
+{{range .Columns}}// Set{{.GoName}} sets the {{.GoName}} field to val.
+func (t *{{$tableGoName}}) Set{{.GoName}}(val {{.GoType}} {{if .Nullable}}, notNull bool{{end}}) {
 	t.{{.GoName}} = val
 	{{if .Nullable}}t.{{.GoName}}_IsNotNull = notNull{{end}}
 }
@@ -146,7 +147,7 @@ func (cc {{$tableGoName}}Slice) FilterInto(filterFunc {{$tableGoName}}SliceFilte
 {{ $tableGoName := .GoFriendlyName}}
 /* Sorting helper containers */
 {{range $i, $e := .Columns}}
-// By{{$e.GoName}} implements sort.Interface for []{{$tableGoName}} based on
+// Sort{{$tableGoName}}By{{$e.GoName}} implements sort.Interface for []{{$tableGoName}} based on
 // the {{$e.GoName}} field. Usage: sort.Sort(Sort{{$tableGoName}}By{{$e.GoName}}(anyGiven{{$tableGoName}}Slice))
 type Sort{{$tableGoName}}By{{$e.GoName}} []{{$tableGoName}}
 
@@ -244,8 +245,8 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}(req *http.Request) (
 }
 
 {{$colCount := len .Columns}}{{$functionName := "CloneGlobalSettings"}}{{$structInstanceName := print "instance" .GoFriendlyName}}
-// Assigns the global settings for operations to the control fields of this instance
-// An example would be:
+// {{$functionName}} assigns the global settings for operations to the control fields 
+// of this instance. An example would be:
 // {{$structInstanceName}}.PgToGo_IgnorePKValuesWhenInsertingAndUseSequence = Tables.PgToGo_IgnorePKValuesWhenInsertingAndUseSequence
 func (instance *{{.GoFriendlyName}}) {{$functionName}}() {
 			
@@ -400,7 +401,7 @@ func (c *CacheFor{{.GoFriendlyName}}) GetAllRows() ([]{{.GoFriendlyName}}, bool)
 
 }
 
-// Sets or refreshes the cache for all {{.GoFriendlyName}} records in the database
+// SetAllRows sets or refreshes the cache for all {{.GoFriendlyName}} records in the database.
 func (c *CacheFor{{.GoFriendlyName}}) SetAllRows(all []{{.GoFriendlyName}}) {
 
 	if c.enabled == false { return 	} 	
@@ -426,7 +427,7 @@ func (c *CacheFor{{.GoFriendlyName}}) SetAllRows(all []{{.GoFriendlyName}}) {
 
 }
 
-// Deletes the dedicated cache store for all {{.GoFriendlyName}} records in the database
+// DeleteAllRows deletes the dedicated cache store for all {{.GoFriendlyName}} records in the database.
 func (c *CacheFor{{.GoFriendlyName}}) DeleteAllRows() {
 
 	if c.enabled == false { return 	} 	
@@ -448,8 +449,8 @@ func (c *CacheFor{{.GoFriendlyName}}) DeleteAllRows() {
 
 }
 
-// Together with SetWhere, GetWhere enables caching of the Where methods, where the condition
-// represents the cache store key.
+// GetWhere, enables caching of the Where methods (together with SetWhere).
+// The condition that gets cached acts as the cache store key.
 func (c *CacheFor{{.GoFriendlyName}}) GetWhere(key string) ([]{{.GoFriendlyName}}, bool) {
 
 	if c.enabled == false { return nil, false } 
@@ -470,8 +471,8 @@ func (c *CacheFor{{.GoFriendlyName}}) GetWhere(key string) ([]{{.GoFriendlyName}
 
 }
 
-// Together with GetWhere, SetWhere enables caching of the Where methods, where the condition
-// represents the cache store key.
+// SetWhere, enables caching of the Where methods (together with GetWhere).
+// The condition that gets cached acts as the cache store key.
 func (c *CacheFor{{.GoFriendlyName}}) SetWhere(key string, slice{{.GoFriendlyName}} []{{.GoFriendlyName}}) {
 
 	if c.enabled == false { return 	} 	
@@ -495,6 +496,7 @@ func (c *CacheFor{{.GoFriendlyName}}) SetWhere(key string, slice{{.GoFriendlyNam
 	// todo: implement CacheProvider functionality
 }
 
+// DeleteWhere removes the cache item corresponding to key.
 func (c *CacheFor{{.GoFriendlyName}}) DeleteWhere(key string) {
 
 	if c.enabled == false { return } 
@@ -515,6 +517,8 @@ func (c *CacheFor{{.GoFriendlyName}}) DeleteWhere(key string) {
 
 }
 
+// GetSlice returns a slice of {{.GoFriendlyName}} from the cache store based on
+// the given key.
 func (c *CacheFor{{.GoFriendlyName}}) GetSlice(key string) ([]{{.GoFriendlyName}}, bool) {
 
 	if c.enabled == false { return nil, false } 
@@ -535,6 +539,8 @@ func (c *CacheFor{{.GoFriendlyName}}) GetSlice(key string) ([]{{.GoFriendlyName}
 
 }
 
+// SetSlice caches a slice of {{.GoFriendlyName}} inside the cache store based and
+// associates it with the given key.
 func (c *CacheFor{{.GoFriendlyName}}) SetSlice(key string, slice{{.GoFriendlyName}} []{{.GoFriendlyName}}) {
 
 	if c.enabled == false { return 	} 	
@@ -559,6 +565,8 @@ func (c *CacheFor{{.GoFriendlyName}}) SetSlice(key string, slice{{.GoFriendlyNam
 
 }
 
+// DeleteSlice removes the slice of {{.GoFriendlyName}} from the cache store entry
+// associated with key.
 func (c *CacheFor{{.GoFriendlyName}}) DeleteSlice(key string) {
 
 	if c.enabled == false { return } 
@@ -579,6 +587,8 @@ func (c *CacheFor{{.GoFriendlyName}}) DeleteSlice(key string) {
 
 }
 
+// Get retrives a *{{.GoFriendlyName}} from the cache store if it exists.
+// The second, boolean return value indicates whether the value was actually found.
 func (c *CacheFor{{.GoFriendlyName}}) Get(key string) (*{{.GoFriendlyName}}, bool) {
 
 	if c.enabled == false { return nil, false } 
@@ -602,6 +612,7 @@ func (c *CacheFor{{.GoFriendlyName}}) Get(key string) (*{{.GoFriendlyName}}, boo
 	return nil, false
 }
 
+// Set associates a {{.GoFriendlyName}} with key, and saves it in the cache store.
 func (c *CacheFor{{.GoFriendlyName}}) Set(key string, struct{{.GoFriendlyName}} {{.GoFriendlyName}}) {
 
 	if c.enabled == false { return 	} 	
@@ -620,7 +631,8 @@ func (c *CacheFor{{.GoFriendlyName}}) Set(key string, struct{{.GoFriendlyName}} 
 
 }
 
-
+// Delete removes the {{.GoFriendlyName}} instance that is associated with key from the
+// cache store.
 func (c *CacheFor{{.GoFriendlyName}}) Delete(key string) {
 
 	if c.enabled == false { return } 

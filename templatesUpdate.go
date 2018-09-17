@@ -4,13 +4,15 @@ package main
 
 const TABLE_STATIC_UPDATE_TEMPLATE = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := "Update"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Updates the rows inside the {{.DbName}} table, based on the supplied condition  and the respective parameters. 
-// The condition must not include the WHERE keyword.  Make sure to start the dollar-prefixed params 
-// inside the condition from {{plus1 $colCount}}.
+// {{$functionName}} attempts to update the rows inside the {{.DbName}} table, based on 
+// the supplied condition  and the respective parameters. 
+// The condition must not include the WHERE keyword.  Make sure to start the dollar-prefixed 
+// params inside the condition from {{plus1 $colCount}}.
 // All the fields in the supplied source {{.GoFriendlyName}} pointer will be updated.
-// If you need only certain fields to be updated, you will have to create a custom method, or use UpdateWithMask().
-// Returns the number of affected rows (zero if no rows found for that condition), and nil error for a successful operation.
-// If operation fails, it returns zero and the error.
+// If you need only certain fields to be updated, you will have to create a custom method, 
+// or use UpdateWithMask().
+// Returns the number of affected rows (zero if no rows found for that condition), 
+// and nil error for a successful operation. If the operation fails, it returns 0 and the error.
 func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}, conditionParamsStartAt{{plus1 $colCount}} string, params ...interface{}) (int64,  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
@@ -59,13 +61,15 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 
 const TABLE_STATIC_UPDATE_TEMPLATE_TX = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := print "Update" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Updates the rows inside the {{.DbName}} table, based on the supplied condition  and the respective parameters. 
-// The condition must not include the WHERE keyword. Make sure to start the dollar-prefixed params 
-// inside the condition from {{plus1 $colCount}}.
+// {{$functionName}} attempts to update the rows inside the {{.DbName}} table, based on 
+// the supplied condition  and the respective parameters. 
+// The condition must not include the WHERE keyword. Make sure to start the dollar-prefixed 
+// params inside the condition from {{plus1 $colCount}}.
 // All the fields in the supplied source {{.GoFriendlyName}} pointer will be updated.
-// If you need only certain fields to be updated, you will have to create a custom method, or use UpdateWithMask().
-// Returns the number of affected rows (zero if no rows found for that condition), and nil error for a successful operation.
-// If operation fails, it returns zero and the error.
+// If you need only certain fields to be updated, you will have to create a custom method, 
+// or use UpdateWithMask().
+// Returns the number of affected rows (zero if no rows found for that condition), 
+// and nil error for a successful operation. If the operation fails, it returns 0 and the error.
 func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}, conditionParamsStartAt{{plus1 $colCount}} string, params ...interface{}) (int64,  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
@@ -112,12 +116,14 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 
 const TABLE_STATIC_UPDATE_WITH_MASK = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := "UpdateWithMask"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Updates the rows inside the {{.DbName}} table, based on the supplied condition  and the respective parameters. 
+// {{$functionName}} attempts to update the rows inside the {{.DbName}} table, based on 
+// the supplied condition  and the respective parameters. 
 // The condition must not include the WHERE keyword.  Make sure to start the dollar-prefixed params 
 // inside the condition from the number of elements supplied in the update mask, plus one.
-// Only the fields in the supplied mask slice of strings will be updated. If the mask is nil, all fields will be updated.
-// Returns the number of affected rows (zero if no rows found for that condition), and nil error for a successful operation.
-// If operation fails, it returns zero and the error.
+// Only the fields in the supplied mask slice of strings will be updated. 
+// If the mask is nil, all fields will be updated.
+// Returns the number of affected rows (zero if no rows found for that condition), and nil error 
+// in case of a successful operation. If the operation fails, it returns 0 and the error.
 func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}, updateMask []string, condition string, params ...interface{}) (int64,  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
@@ -208,12 +214,14 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 
 const TABLE_STATIC_UPDATE_WITH_MASK_TX = `{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := print "UpdateWithMask" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Updates the rows inside the {{.DbName}} table, based on the supplied condition  and the respective parameters. 
-// The condition must not include the WHERE keyword.  Make sure to start the dollar-prefixed params 
-// inside the condition from the number of elements supplied in the update mask, plus one.
-// Only the fields in the supplied mask slice of strings will be updated. If the mask is nil, all fields will be updated.
-// Returns the number of affected rows (zero if no rows found for that condition), and nil error for a successful operation.
-// If operation fails, it returns zero and the error.
+// {{$functionName}} attempts to update the rows inside the {{.DbName}} table, based on 
+// the supplied condition  and the respective parameters. The condition must not include 
+// the WHERE keyword.  Make sure to start the dollar-prefixed params inside the condition 
+// from the number of elements supplied in the update mask, plus one.
+// Only the fields in the supplied mask slice of strings will be updated. If the mask is nil, 
+// all fields will be updated.
+// Returns the number of affected rows (zero if no rows found for that condition), 
+// and nil error for a successful operation. If operation fails, it returns 0 and the error.
 func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}, updateMask []string, condition string, params ...interface{}) (int64,  error) {
 						
 	var errorPrefix = "{{.GoFriendlyName}}Utils.{{$functionName}}() ERROR: "
@@ -303,11 +311,13 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 
 const TABLE_INSTANCE_UPDATE_TEMPLATE = `{{if lt 0 (len .PKColumns)}}{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := "Update"}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Updates the row inside the {{.DbName}} table, corresponding to the PK of the current {{.GoFriendlyName}} instance.
+// {{$functionName}} attempts to update the row inside the {{.DbName}} table, corresponding 
+// to the PK of the current {{.GoFriendlyName}} instance.
 // All the fields in the supplied source {{.GoFriendlyName}} pointer will be updated.
-// If you need only certain fields to be updated, you will have to create a custom method, or use UpdateWithMask().
-// Returns nil error for a successful operation. 
-// If operation fails, it returns the error. If more than one row gets updated, it will return an error.
+// If you need only certain fields to be updated, you will have to create a custom method, 
+// or use UpdateWithMask().
+// Returns nil error for a successful operation. If operation fails, it returns the error. 
+// If more than one row gets updated, it will return an error.
 func ({{$sourceStructName}} *{{.GoFriendlyName}}) {{$functionName}}() error {
 						
 	var errorPrefix = "instance of {{.GoFriendlyName}}.{{$functionName}}() ERROR: "
@@ -353,11 +363,13 @@ func ({{$sourceStructName}} *{{.GoFriendlyName}}) {{$functionName}}() error {
 
 const TABLE_INSTANCE_UPDATE_TEMPLATE_TX = `{{if lt 0 (len .PKColumns)}}{{$colCount := len .Columns}}{{$pkColCount := len .PKColumns}}
 {{$functionName := print "UpdateSingleInstance" .GoFriendlyName}}{{$sourceStructName := print "source" .GoFriendlyName}}
-// Updates the row inside the {{.DbName}} table, corresponding to the PK of the current {{.GoFriendlyName}} instance.
+// {{$functionName}} attempts to update the row inside the {{.DbName}} table, corresponding to 
+// the PK of the current {{.GoFriendlyName}} instance.
 // All the fields in the supplied source {{.GoFriendlyName}} pointer will be updated.
-// If you need only certain fields to be updated, you will have to create a custom method, or use UpdateWithMask().
-// Returns nil error for a successful operation. 
-// If operation fails, it returns the error. If more than one row gets updated, it will return an error.
+// If you need only certain fields to be updated, you will have to create a custom method, 
+// or use UpdateWithMask().
+// Returns nil error for a successful operation. If operation fails, it returns the error. 
+// If more than one row gets updated, it will return an error.
 func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFriendlyName}}) error {
 						
 	var errorPrefix = "instance of {{.GoFriendlyName}}.{{$functionName}}() ERROR: "

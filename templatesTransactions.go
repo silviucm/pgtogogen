@@ -17,19 +17,21 @@ import (
 //
 
 // Transaction isolation levels for the pgx package
+const (
+	IsoLevelSerializable = pgx.Serializable
+	IsoLevelRepeatableRead = pgx.RepeatableRead
+	IsoLevelReadCommitted = pgx.ReadCommitted
+	IsoLevelReadUncommitted = pgx.ReadUncommitted	
+)
 
-const IsoLevelSerializable = pgx.Serializable
-const IsoLevelRepeatableRead = pgx.RepeatableRead
-const IsoLevelReadCommitted = pgx.ReadCommitted
-const IsoLevelReadUncommitted = pgx.ReadUncommitted
 
-// Wrapper structure over the pgx transaction package, so we don't need to import
+// Transaction is a wrapper structure over the pgx transaction package, to avoid importing
 // that package in the generated table-to-struct files.
 type Transaction struct {
 	Tx *pgx.Tx
 }
 
-// Commits the current transaction
+// Commit commits the current transaction
 func (t *Transaction) Commit() error {
 	if t.Tx == nil {
 		return NewModelsErrorLocal("Transaction.Commit()", "The inner Tx transaction is nil")
@@ -37,7 +39,7 @@ func (t *Transaction) Commit() error {
 	return t.Tx.Commit()
 }
 
-// Attempts to rollback the current transaction
+// Rollback attempts to rollback the current transaction
 func (t *Transaction) Rollback() error {
 	if t.Tx == nil {
 		return NewModelsErrorLocal("Transaction.Rollback()", "The inner Tx transaction is nil")
@@ -47,7 +49,7 @@ func (t *Transaction) Rollback() error {
 
 /* BEGIN Transactions utility functions */
 
-// Begins and returns a transaction using the default isolation level.
+// TxBegin begins and returns a transaction using the default isolation level.
 // Unlike TxWrap, it is the responsibility of the caller to commit and
 // rollback the transaction if necessary.
 func TxBegin() (*Transaction, error) {
@@ -57,14 +59,12 @@ func TxBegin() (*Transaction, error) {
 
 	if err != nil {
 		return nil, err
-	} else {
-		txWrapper.Tx = tx
-		return txWrapper, nil
-	}
-
+	} 
+	txWrapper.Tx = tx
+	return txWrapper, nil
 }
 
-// Begins and returns a transaction using the specified isolation level.
+// TxBeginIso begins and returns a transaction using the specified isolation level.
 // The following global constants can be passed (residing in the same package):
 //  IsoLevelSerializable
 //  IsoLevelRepeatableRead
@@ -77,16 +77,15 @@ func TxBeginIso(isolationLevel pgx.TxIsoLevel) (*Transaction, error) {
 
 	if err != nil {
 		return nil, err
-	} else {
-		txWrapper.Tx = tx
-		return txWrapper, nil
-	}
+	} 
+	txWrapper.Tx = tx
+	return txWrapper, nil	
 }
 
-/* This method helps wrap the transaction inside a closure function. Additional arguments can be passed
- along to the closure via a variadic list of interface{} parameters. 
- TxWrap automatically handles commit and rollback, in case of error. 
- It returns an error in case of failure, or nil, in case of success.
+/*TxWrap helps wrap the transaction inside a closure function. Additional 
+ arguments can be passed along to the closure via a variadic list of 
+ interface{} parameters. TxWrap automatically handles commit and rollback, 
+ in case of error. It returns an error in case of failure, or nil, if successful.
 
  Example:
 
