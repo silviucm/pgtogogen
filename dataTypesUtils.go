@@ -75,7 +75,7 @@ func GetGoTypeForColumn(columnType string, nullable bool, udtName string) (typeR
 			nullableTypeReturn = NULLABLE_TYPE_BOOL
 		}
 
-	case "character varying", "text", "character[]":
+	case "character varying", "text", "character", "character[]":
 		typeReturn = "string"
 		if nullable {
 			nullableTypeReturn = NULLABLE_TYPE_STRING
