@@ -489,6 +489,11 @@ func (t *ToolOptions) CollectTables() error {
 			log.Fatal("CollectTables(): CollectUniqueConstraints method for table ", currentTable.DbName, " FATAL error: ", err)
 		}
 
+		// collect the unique indexes for the table and add them to the unique constraints slice
+		if err := currentTable.CollectUniqueIndexes(); err != nil {
+			log.Fatal("CollectTables(): CollectUniqueIndexes method for table ", currentTable.DbName, " FATAL error: ", err)
+		}
+
 		// generate the typical select sql queries
 		currentTable.CreateGenericQueries()
 

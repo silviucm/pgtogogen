@@ -307,6 +307,8 @@ func (tbl *Table) CollectForeignKeys() error {
 	return nil
 }
 
+// CollectUniqueConstraints collects all the unique constraints for the table.
+// Unique indexes are not included, and are collected by CollectUniqueIndexes.
 func (tbl *Table) CollectUniqueConstraints() error {
 
 	var currentConstraintName, currentConstraintSchema, currentTableName, currentColumnName, currentConstraintType string
@@ -341,6 +343,88 @@ func (tbl *Table) CollectUniqueConstraints() error {
 
 		if tbl.Columns == nil {
 			log.Fatal("CollectUniqueConstraints() FATAL: nil Columns slice in this Table struct instance. Make sure you call CollectColumns() before this method.")
+		}
+
+		// create the constraint object and put it into the temp map if not already there
+		var newOrExistingConstraint Constraint
+		newOrExistingConstraint, alreadyThere := constraintsMap[currentConstraintName]
+
+		if alreadyThere == false {
+			newOrExistingConstraint = Constraint{}
+			newOrExistingConstraint.ConnectionPool = tbl.ConnectionPool
+			newOrExistingConstraint.Options = tbl.Options
+			newOrExistingConstraint.ParentTable = tbl
+
+			newOrExistingConstraint.DbName = currentConstraintName
+			newOrExistingConstraint.IsUnique = true
+			newOrExistingConstraint.Type = currentConstraintType
+
+			numberOfUQs = numberOfUQs + 1
+		}
+
+		for i := range tbl.Columns {
+			if tbl.Columns[i].DbName == currentColumnName {
+				// add the column to the Columns slice of the constraint
+				newOrExistingConstraint.Columns = append(newOrExistingConstraint.Columns, tbl.Columns[i])
+			}
+		}
+
+		constraintsMap[currentConstraintName] = newOrExistingConstraint
+
+	}
+
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if numberOfUQs > 0 {
+		for _, constraint := range constraintsMap {
+			tbl.UniqueConstraints = append(tbl.UniqueConstraints, constraint)
+		}
+	}
+
+	//log.Println("Number of unique constraints collected for ", tbl.DbName, ": ", len(tbl.UniqueConstraints))
+	return nil
+
+}
+
+// CollectUniqueIndexes collects all the unique indexes minus the already-collected
+// unique constraints.
+func (tbl *Table) CollectUniqueIndexes() error {
+
+	var currentConstraintName, currentConstraintSchema, currentTableName, currentColumnName, currentConstraintType string
+
+	var uniqueIndexesQuery = `select i.relname as constraint_name, ist.table_schema as constraint_schema,
+    t.relname as table_name, a.attname as column_name, 'UNIQUE' as constraint_type
+	from pg_class t, information_schema.tables ist, pg_class i,  pg_index ix, pg_attribute a
+	where t.relname = $1 and t.oid = ix.indrelid and ix.indisunique = true and i.oid = ix.indexrelid
+    and a.attrelid = t.oid and a.attnum = ANY(ix.indkey) and t.relkind = 'r'
+    and t.relname = ist.table_name and ist.table_catalog = 'tradermood' and ist.table_schema = 'public'
+    and i.relname NOT IN (SELECT tc.constraint_name FROM information_schema.table_constraints AS tc  
+    JOIN information_schema.key_column_usage AS kcu ON (tc.constraint_name = kcu.constraint_name and tc.table_name = kcu.table_name))
+	group by t.relname, i.relname, ix.indisunique, a.attname, ist.table_schema
+	order by t.relname, i.relname;
+	`
+
+	rows, err := tbl.ConnectionPool.Query(uniqueIndexesQuery, tbl.DbName)
+
+	if err != nil {
+		log.Fatal("CollectUniqueIndexes() fatal error running the query:", err)
+	}
+	defer rows.Close()
+
+	var numberOfUQs int = 0
+
+	constraintsMap := make(map[string]Constraint)
+	for rows.Next() {
+		err := rows.Scan(&currentConstraintName, &currentConstraintSchema, &currentTableName, &currentColumnName, &currentConstraintType)
+		if err != nil {
+			log.Fatal("CollectUniqueIndexes() fatal error inside rows.Next() iteration: ", err)
+		}
+
+		if tbl.Columns == nil {
+			log.Fatal("CollectUniqueIndexes() FATAL: nil Columns slice in this Table struct instance. Make sure you call CollectColumns() before this method.")
 		}
 
 		// create the constraint object and put it into the temp map if not already there
