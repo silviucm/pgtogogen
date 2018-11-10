@@ -156,6 +156,24 @@ func GetGoTypeForColumn(columnType string, nullable bool, udtName string) (typeR
 		if nullable {
 			nullableTypeReturn = NULLABLE_TYPE_TIMESTAMP
 		}
+
+	case "time with time zone":
+
+		typeReturn = "time.Time"
+		goTypeToImport = "time"
+
+		if nullable {
+			nullableTypeReturn = NULLABLE_TYPE_TIMESTAMP_TZ
+		}
+
+	case "time without time zone":
+
+		typeReturn = "time.Time"
+		goTypeToImport = "time"
+
+		if nullable {
+			nullableTypeReturn = NULLABLE_TYPE_TIMESTAMP
+		}
 	}
 
 	return typeReturn, nullableTypeReturn, goTypeToImport
