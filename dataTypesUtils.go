@@ -17,7 +17,7 @@ const (
 	NULLABLE_TYPE_INTERVAL     = "pgtype.Interval"
 	NULLABLE_TYPE_JSON         = "JSON"
 	NULLABLE_TYPE_JSONB        = "JSONB"
-	NULLABLE_TYPE_NUMERIC      = "pgtype.Numeric"
+	NULLABLE_TYPE_NUMERIC      = "Numeric"
 	NULLABLE_TYPE_STRING       = "pgtype.Text"
 	NULLABLE_TYPE_TEXT         = "pgtype.Text"
 	NULLABLE_TYPE_VARCHAR      = "pgtype.Varchar"
@@ -122,7 +122,7 @@ func GetGoTypeForColumn(columnType string, nullable bool, udtName string) (typeR
 		}
 
 	case "numeric":
-		typeReturn = "string"
+		typeReturn = NULLABLE_TYPE_NUMERIC
 		if nullable {
 			nullableTypeReturn = NULLABLE_TYPE_NUMERIC
 		}
@@ -195,6 +195,8 @@ func GetGoTypeNullableType(goType string) string {
 		return NULLABLE_TYPE_INT32
 	case "int8", "int64", "bigserial", "bigint":
 		return NULLABLE_TYPE_INT64
+	case "Numeric":
+		return NULLABLE_TYPE_NUMERIC
 	case "JSONString":
 		return NULLABLE_TYPE_JSON
 	case "JSONBString":
@@ -229,6 +231,8 @@ func GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField 
 		return "&pgtype.Float4{Float: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_FLOAT64:
 		return "&pgtype.Float8{Float: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
+	case NULLABLE_TYPE_NUMERIC:
+		return "toNumeric(" + valueField + ", " + statusField + ")"
 	case NULLABLE_TYPE_INT16:
 		return "&pgtype.Int2{Int: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_INT32:
@@ -266,7 +270,7 @@ func GetNullableTypeValueFieldName(goNullableType string) string {
 	case NULLABLE_TYPE_FLOAT64:
 		return "Float"
 	case NULLABLE_TYPE_NUMERIC:
-		return "Numeric"
+		return "NumericVal()"
 	case NULLABLE_TYPE_INT16:
 		return "Int"
 	case NULLABLE_TYPE_INT32:

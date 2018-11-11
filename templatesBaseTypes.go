@@ -8,6 +8,7 @@ const BASE_DB_TYPES = `package {{.PackageName}}
 /* ************************************************************* */
 
 import (
+	"math/big"
 	pgtype "{{.PgTypeImport}}"	
 )
 
@@ -15,19 +16,30 @@ import (
 // DB custom type, aliases and type-related helper functions
 //
 
-// Json types that embed the pgtype nullable types, and offer additional
-// string-rendering methods
+// JSON is a wrapper struct that embeds the pgtype nullable JSON type, 
+// and offers additional string-rendering methods.
 type JSON struct {
 	pgtype.JSON
 }
 
 func (j *JSON)String() string { return string(j.Bytes) }
 
+// JSONB is a wrapper struct that embeds the pgtype nullable JSONB type, 
+// and offers additional string-rendering methods.
 type JSONB struct {
 	pgtype.JSONB
 }
 
 func (j *JSONB)String() string { return string(j.Bytes) }
+
+// Numeric is a wrapper struct that embeds the pgtype nullable Numeric type, 
+// and offers additional assignment and rendering methods
+type Numeric struct {
+	pgtype.Numeric
+}
+
+func (n *Numeric)NumericVal() Numeric { return *n }
+
 
 // Nullable field status constants
 const cFIELD_VALUE_UNDEFINED pgtype.Status = pgtype.Undefined
@@ -49,4 +61,65 @@ func boolFromStatus(status pgtype.Status) bool {
 	}
 	return false
 }
+
+// toNumeric returns a new Numeric from an existing numeric but with
+// a pgtogogen notNull bool value taking precedence over the Status field.
+func toNumeric(existingNumeric Numeric, notNull bool) Numeric {
+	return Numeric{
+		Numeric: pgtype.Numeric{
+			Int:    existingNumeric.Int,
+			Exp:    existingNumeric.Exp,
+			Status: statusFromBool(notNull),
+		},
+	}
+}
+
+// To_Numeric_FromString converts a string to a Numeric value
+func To_Numeric_FromString(numericStr string) (Numeric, error) {
+
+	var errorPrefix = "To_numericStr_FromString() ERROR: "
+
+	n := Numeric{}
+	if numericStr == "" {
+		return n, NewModelsErrorLocal(errorPrefix, "The input parameter is an empty string.")
+	}
+	
+	err := n.Set(numericStr)
+	if err != nil {
+		return n, err
+	}
+	return n, nil
+}
+
+// LessComparatorFor_Numeric is a sort comparator function for the Numeric type
+func LessComparatorFor_Numeric(first, second Numeric) bool { return cmpNumeric(first,second) }
+
+var big0 *big.Int = big.NewInt(0)
+var big1 *big.Int = big.NewInt(1)
+var big10 *big.Int = big.NewInt(10)
+
+func cmpNumeric(first, second Numeric) bool {
+
+	if first.Status != cFIELD_VALUE_PRESENT {
+		return true
+	}
+	
+	if second.Status != cFIELD_VALUE_PRESENT {
+		return false
+	}
+
+	// math.big Cmp compares x and y and returns:
+	//
+	//   -1 if x <  y
+	//    0 if x == y
+	//   +1 if x >  y
+	//	
+	cmpInts := first.Int.Cmp(second.Int)
+	if cmpInts != 0 {
+		return cmpInts == -1
+	}
+		
+	return first.Exp < second.Exp
+}
+
 `
