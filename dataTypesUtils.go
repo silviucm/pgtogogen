@@ -265,6 +265,8 @@ func GetNullableTypeValueFieldName(goNullableType string) string {
 		return "Float"
 	case NULLABLE_TYPE_FLOAT64:
 		return "Float"
+	case NULLABLE_TYPE_NUMERIC:
+		return "Numeric"
 	case NULLABLE_TYPE_INT16:
 		return "Int"
 	case NULLABLE_TYPE_INT32:
