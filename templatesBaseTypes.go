@@ -115,11 +115,7 @@ func cmpNumeric(first, second Numeric) bool {
 	//   +1 if x >  y
 	//	
 	cmpInts := first.Int.Cmp(second.Int)
-	if cmpInts != 0 {
-		return cmpInts == -1
-	}
-		
-	return first.Exp < second.Exp
+	return cmpInts == -1
 }
 
 `
