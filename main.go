@@ -10,8 +10,8 @@ import (
 
 const ARGS_ERROR_HEADER string = "\n-------------------------\nARGUMENTS ERROR:\n-------------------------\n"
 
-var dbHost, dbPort, dbName, dbUser, dbPass, dbSchema, outputFolder, packageName *string
-var createFolderIfNotExists *bool
+var dbHost, dbPort, dbName, dbUser, dbPass, dbSchema, dbSSLMode, outputFolder, packageName *string
+var createFolderIfNotExists, debug *bool
 var generateFunctions, generatePKGetters, generateUQGetters, generateGuidGetters *bool
 
 var dbPortUInt16 uint16 = 5432
@@ -27,12 +27,16 @@ func main() {
 	dbUser = flag.String("u", "", "database user name")
 	dbPass = flag.String("pass", "", "database password")
 	dbSchema = flag.String("schema", "public", "database schema, defaults to 'public' if left empty")
+	dbSSLMode = flag.String("ssl", "", "SSL mode (defaults to 'prefer'), one of the standard sslmode connection string values ")
 
 	// location settings
 	outputFolder = flag.String("o", "./models", "the output folder to generate the db structures, defaults to models")
 
 	// location settings
 	createFolderIfNotExists = flag.Bool("createFolder", false, "create the output folder it it does not exist")
+
+	// debug mode to help identify crashes (print out the query before crashing)
+	debug = flag.Bool("debug", false, "when true, increase debug verbosity to help identify the nature of the crash")
 
 	// package settings
 	packageName = flag.String("pkg", "models", "the package name for the generated files")
@@ -52,12 +56,13 @@ func main() {
 
 	// assign the options to a ToolOptions struct
 	options := &ToolOptions{
-		DbHost:   *dbHost,
-		DbPort:   dbPortUInt16,
-		DbName:   *dbName,
-		DbUser:   *dbUser,
-		DbPass:   *dbPass,
-		DbSchema: *dbSchema,
+		DbHost:    *dbHost,
+		DbPort:    dbPortUInt16,
+		DbName:    *dbName,
+		DbUser:    *dbUser,
+		DbPass:    *dbPass,
+		DbSchema:  *dbSchema,
+		DbSSLMode: *dbSSLMode,
 
 		PgxImport:    "github.com/jackc/pgx",
 		PgTypeImport: "github.com/jackc/pgx/pgtype",

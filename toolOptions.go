@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/tls"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -9,17 +10,19 @@ import (
 	"strconv"
 	"strings"
 	"text/template"
+	"unicode"
 
 	"github.com/silviucm/pgtogogen/internal/pgx"
 )
 
 type ToolOptions struct {
-	DbHost   string
-	DbPort   uint16
-	DbName   string
-	DbUser   string
-	DbPass   string
-	DbSchema string
+	DbHost    string
+	DbPort    uint16
+	DbName    string
+	DbUser    string
+	DbPass    string
+	DbSchema  string
+	DbSSLMode string
 
 	DbMajorVersion int
 	DbMinorVersion int
@@ -60,6 +63,13 @@ func (t *ToolOptions) InitDatabase() (*pgx.ConnPool, error) {
 	config.Database = t.DbName
 	config.Port = t.DbPort
 
+	// SSL options
+	if t.DbSSLMode == "prefer" || t.DbSSLMode == "require" {
+		config.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	} else if t.DbSSLMode == "verify-ca" || t.DbSSLMode == "verify-full" {
+		config.TLSConfig = &tls.Config{}
+	}
+
 	fmt.Println("--------------------------------------------------------------------------------------------")
 
 	connPool, err := pgx.NewConnPool(config)
@@ -76,7 +86,7 @@ func (t *ToolOptions) InitDatabase() (*pgx.ConnPool, error) {
 	majorVersion, minorVersion := t.GetPostgresVersion()
 	t.DbMajorVersion = majorVersion
 	t.DbMinorVersion = minorVersion
-	log.Println("Database version: ", t.DbMajorVersion, ".", t.DbMinorVersion)
+	log.Printf("Database version: %d.%d\n", t.DbMajorVersion, t.DbMinorVersion)
 	fmt.Println("--------------------------------------------------------------------------------------------")
 
 	return t.ConnectionPool, err
@@ -774,6 +784,7 @@ func (t *ToolOptions) GetPostgresVersion() (majorVersion int, minorVersion int) 
 
 	// For "SELECT version();"  the returned string should look something like: "PostgreSQL 9.3.6, compiled by Visual C++ build 1600, 64-bit"
 	// For "SHOW server_version", the result should be something like: "9.3.6"
+	// After version 11, even "SHOW server_version" can display something like "11.2 (Ubuntu 11.2-1.pgdg18.04+1)"
 	if versionRow != nil {
 		scanErr := versionRow.Scan(&pgVersion)
 		if scanErr != nil {
@@ -794,7 +805,21 @@ func (t *ToolOptions) GetPostgresVersion() (majorVersion int, minorVersion int) 
 		if len(versions) > 1 {
 			minorVersionInt64, err = strconv.ParseInt(versions[1], 10, 64)
 			if err != nil {
-				log.Fatal("GetPostgresVersion() error parsing minor version: ", err)
+				// Attempt once more, by eliminating any suffix from the minor version
+				// (e.g. given this full version string:  "11.2 (Ubuntu 11.2-1.pgdg18.04+1)"
+				// then try to eliminate everything after "11.2"
+				for i, c := range versions[1] {
+					if !unicode.IsDigit(c) && i > 0 {
+						minorVersionInt64, err = strconv.ParseInt(versions[1][0:i], 10, 64)
+						if err != nil {
+							log.Fatal("GetPostgresVersion() error parsing minor version: ", err)
+						}
+						break
+					} else if !unicode.IsDigit(c) && i == 0 {
+						log.Fatal("GetPostgresVersion() error parsing minor version: ", err)
+					}
+				}
+
 			}
 		}
 

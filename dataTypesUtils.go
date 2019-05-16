@@ -24,6 +24,7 @@ const (
 	NULLABLE_TYPE_UUID         = "pgtype.UUID"
 	NULLABLE_TYPE_TIMESTAMP_TZ = "pgtype.Timestamptz"
 	NULLABLE_TYPE_TIMESTAMP    = "pgtype.Timestamp"
+	NULLABLE_TYPE_DATE         = "pgtype.Date"
 )
 
 /* Utility methods for dealing with SQL data types in general and PostgreSQL data types in particular */
@@ -174,6 +175,14 @@ func GetGoTypeForColumn(columnType string, nullable bool, udtName string) (typeR
 		if nullable {
 			nullableTypeReturn = NULLABLE_TYPE_TIMESTAMP
 		}
+	case "date":
+
+		typeReturn = "time.Time"
+		goTypeToImport = "time"
+
+		if nullable {
+			nullableTypeReturn = NULLABLE_TYPE_DATE
+		}
 	}
 
 	return typeReturn, nullableTypeReturn, goTypeToImport
@@ -253,6 +262,8 @@ func GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField 
 		// Unfortunately, for Timestamp without timezone, we need to convert to
 		// UTC location for pgtype.Timestamp to accept the value
 		return "&pgtype.Timestamp{Time: utcTime(" + valueField + "), Status: statusFromBool(" + statusField + ")}"
+	case NULLABLE_TYPE_DATE:
+		return "&pgtype.Date{Time: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	}
 
 	return "[GenerateNullableTypeStructTemplate: could not find the go nullable type: '" + goNullableType + "']"
@@ -288,6 +299,8 @@ func GetNullableTypeValueFieldName(goNullableType string) string {
 	case NULLABLE_TYPE_TIMESTAMP_TZ:
 		return "Time"
 	case NULLABLE_TYPE_TIMESTAMP:
+		return "Time"
+	case NULLABLE_TYPE_DATE:
 		return "Time"
 	}
 

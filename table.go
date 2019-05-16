@@ -176,16 +176,29 @@ func (tbl *Table) CollectPrimaryKeys() error {
 
 	var numberOfPKs int = 0
 
+	// Errors such as "Cannot decode null into string" or "cannot assign NULL to *string"
+	// come from tables without constraints. This flag indicates that they are not fatal.
+	isLastErrorSkippable := true
+
 	pkColumnsString := ""
 	for rows.Next() {
 		err := rows.Scan(&currentConstraintName, &currentColumnName, &ordinalPosition)
-
-		if err != nil && strings.Contains(err.Error(), "Cannot decode null into string") == false {
+		if err != nil {
+			isLastErrorSkippable = false
+			if *debug {
+				log.Printf("\n-- DEBUG [begin] --\nQuery:\n%s\n-------\nDb name: %s | Table name: %s\n-- DEBUG [end] --\n", pkQuery, tbl.Options.DbName, tbl.DbName)
+			}
+			if strings.Contains(err.Error(), "Cannot decode null into string") {
+				isLastErrorSkippable = true
+				continue
+			}
+			// Another form of the error was seen when scanning plr_modules (the R language extension).
+			// The error message looked like: "cannot assign NULL to *string"
+			if strings.Contains(err.Error(), "cannot assign NULL to *string") {
+				isLastErrorSkippable = true
+				continue
+			}
 			log.Fatal("CollectPrimaryKeys() fatal error inside rows.Next() iteration: ", err)
-		}
-
-		if err != nil && strings.Contains(err.Error(), "Cannot decode null into string") {
-			continue
 		}
 
 		if tbl.Columns == nil {
@@ -217,7 +230,7 @@ func (tbl *Table) CollectPrimaryKeys() error {
 	tbl.PKColumnsString = pkColumnsString
 
 	err = rows.Err()
-	if err != nil && strings.Contains(err.Error(), "Cannot decode null into string") == false {
+	if err != nil && !isLastErrorSkippable {
 		log.Fatal(err)
 	}
 
