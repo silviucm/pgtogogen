@@ -12,6 +12,7 @@ const BASE_TEMPLATE = `package {{.PackageName}}
 import (
 	pgx "{{.PgxImport}}"		
 	"bytes"
+	"crypto/tls"
 	"errors"
 	"log"
 	"strconv"
@@ -111,6 +112,13 @@ func GetDefaultDbSettings() pgx.ConnPoolConfig {
 	config.Port = DB_PORT
 	config.MaxConnections = DB_POOL_MAX_CONNECTIONS
 	
+	// SSL options
+	if DB_SSL == "prefer" || DB_SSL == "require" || DB_SSL == "allow" {
+		config.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	} else if DB_SSL == "verify-ca" || DB_SSL == "verify-full" {
+		config.TLSConfig = &tls.Config{}
+	}	
+	
 	return config
 	
 }
@@ -160,6 +168,15 @@ func InitDatabaseMinimal(host string, port uint16, user, pass, dbName string, po
 	
 	return InitDatabase(GetDefaultDbSettings())
 
+}
+
+// InitDatabaseSetSSLMode allows setting the ssl mode for subsequent db initialization.
+// It should be called right before InitDatabaseMinimal.
+// The sslmode value can be "allow", "prefer", "require", "verify-ca" or "verify-full".
+// An empty string or "disable" signify no SSL. Passing an unknown value is the same 
+// as passing an empty string.
+func InitDatabaseSetSSLMode(sslmode string) {
+	DB_SSL = sslmode
 }
 
 /* BEGIN Error and Logging utility functions */
@@ -491,6 +508,7 @@ var DB_USER string = "testuser"
 var DB_PASS string = "testuser"
 var DB_NAME string = "testdb"
 var DB_POOL_MAX_CONNECTIONS int = 100
+var DB_SSL string = ""
 `
 
 const BASE_TEMPLATE_COLLECTIONS = `package {{.PackageName}}

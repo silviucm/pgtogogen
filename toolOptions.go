@@ -64,7 +64,7 @@ func (t *ToolOptions) InitDatabase() (*pgx.ConnPool, error) {
 	config.Port = t.DbPort
 
 	// SSL options
-	if t.DbSSLMode == "prefer" || t.DbSSLMode == "require" {
+	if t.DbSSLMode == "prefer" || t.DbSSLMode == "require" || t.DbSSLMode == "allow" {
 		config.TLSConfig = &tls.Config{InsecureSkipVerify: true}
 	} else if t.DbSSLMode == "verify-ca" || t.DbSSLMode == "verify-full" {
 		config.TLSConfig = &tls.Config{}
