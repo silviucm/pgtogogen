@@ -49,6 +49,21 @@ func GetGoFriendlyNameForColumn(columnName string) string {
 	return strings.Join(subNames, "")
 }
 
+// GetGoInsertNameForColumn returns the Go-friendly column names specialized for insert
+// operations. The reason for this is that when we use custom types such as Numeric,
+// instead of the underlying pgx (pgtypes) Numeric, the insert operation will fail, as
+// pgx does not know how to convert the custom type. For such exceptions, provide additional
+// methods and expose them when rendering the Go-friendly column name in the insert
+// method generation.
+// Any other types that do not require these customization will simply return the Go name.
+func GetGoInsertNameForColumn(currentGoName, resolvedGoType string) string {
+	switch resolvedGoType {
+	case NULLABLE_TYPE_NUMERIC:
+		return currentGoName + ".EmbeddedVal()"
+	}
+	return currentGoName
+}
+
 // GetGoTypeForColumn identifies the proper Go type for the database type
 // specified in columnType. An additional udtName may be needed for array types, in
 // which case udtName is not empty. (e.g. character[] will come as columnType=ARRAY
@@ -230,7 +245,9 @@ func GetGoTypeNullableType(goType string) string {
 //
 //  "&pgtype.Varchar{String:sourceCmsArticle.Overview, Status: sourceCmsArticle.Overview_Is_Present}"
 //
-func GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField string) string {
+// The forInsert flag is used to generate particular code for insert statements. For example, the
+// custom Numeric type is not recognized by pgx own Numeric type, so, at insert, we need to use that one.
+func GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField string, forInsert bool) string {
 
 	switch goNullableType {
 
@@ -241,6 +258,9 @@ func GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField 
 	case NULLABLE_TYPE_FLOAT64:
 		return "&pgtype.Float8{Float: " + valueField + ", Status: statusFromBool(" + statusField + ")}"
 	case NULLABLE_TYPE_NUMERIC:
+		if forInsert {
+			return "toPgxNumeric(" + valueField + ", " + statusField + ")"
+		}
 		return "toNumeric(" + valueField + ", " + statusField + ")"
 	case NULLABLE_TYPE_INT16:
 		return "&pgtype.Int2{Int: " + valueField + ", Status: statusFromBool(" + statusField + ")}"

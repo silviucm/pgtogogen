@@ -23,7 +23,10 @@ var fns = template.FuncMap{
 		return GetNullableTypeValueFieldName(goNullableType)
 	},
 	"generateNullableTypeStructTemplate": func(goNullableType string, valueField string, statusField string) string {
-		return GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField)
+		return GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField, false)
+	},
+	"generateNullableTypeStructTemplateForInsert": func(goNullableType string, valueField string, statusField string) string {
+		return GenerateNullableTypeStructTemplate(goNullableType, valueField, statusField, true)
 	},
 }
 

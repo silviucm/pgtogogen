@@ -40,6 +40,8 @@ type Numeric struct {
 
 func (n *Numeric)NumericVal() Numeric { return *n }
 
+func (n *Numeric)EmbeddedVal() *pgtype.Numeric { return &n.Numeric }
+
 
 // Nullable field status constants
 const cFIELD_VALUE_UNDEFINED pgtype.Status = pgtype.Undefined
@@ -71,6 +73,16 @@ func toNumeric(existingNumeric Numeric, notNull bool) Numeric {
 			Exp:    existingNumeric.Exp,
 			Status: statusFromBool(notNull),
 		},
+	}
+}
+
+// toPgxNumeric returns a new pgtype.Numeric from an existing numeric but with
+// a pgtogogen notNull bool value taking precedence over the Status field.
+func toPgxNumeric(existingNumeric Numeric, notNull bool) *pgtype.Numeric {
+	return &pgtype.Numeric{
+		Int:    existingNumeric.Int,
+		Exp:    existingNumeric.Exp,
+		Status: statusFromBool(notNull),
 	}
 }
 

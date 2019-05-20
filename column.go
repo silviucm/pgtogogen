@@ -6,8 +6,8 @@ import (
 	"log"
 	"text/template"
 
-	pgtype "github.com/silviucm/pgtogogen/internal/pgx/pgtype"
 	pgx "github.com/silviucm/pgtogogen/internal/pgx"
+	pgtype "github.com/silviucm/pgtogogen/internal/pgx/pgtype"
 )
 
 /* Column Section */
@@ -31,10 +31,11 @@ type Column struct {
 
 	IsFK bool
 
-	GoName         string
-	GoType         string
-	GoNullableType string // e.g. "pgx.NullString"
-	IsGuid         bool
+	GoName          string
+	GoNameForInsert string
+	GoType          string
+	GoNullableType  string // e.g. "pgx.NullString"
+	IsGuid          bool
 
 	ColumnComment string
 }

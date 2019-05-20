@@ -101,6 +101,7 @@ func (tbl *Table) CollectColumns() error {
 			tbl.GoTypesToImport[goTypeToImport] = goTypeToImport
 		}
 
+		currentGoName := GetGoFriendlyNameForColumn(currentColumnName)
 		// instantiate a column struct
 		currentColumn := &Column{
 			DbName:          currentColumnName,
@@ -113,9 +114,10 @@ func (tbl *Table) CollectColumns() error {
 
 			IsCompositePK: false, IsPK: false, IsFK: false,
 
-			GoName:         GetGoFriendlyNameForColumn(currentColumnName),
-			GoType:         resolvedGoType,
-			GoNullableType: nullableType,
+			GoName:          currentGoName,
+			GoNameForInsert: GetGoInsertNameForColumn(currentGoName, resolvedGoType),
+			GoType:          resolvedGoType,
+			GoNullableType:  nullableType,
 
 			ConnectionPool: tbl.ConnectionPool,
 			Options:        tbl.Options,

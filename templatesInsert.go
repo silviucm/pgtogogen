@@ -26,8 +26,8 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 	{{end}}
 
 	// define the insert query
-	var insertQueryAllColumns = "{{.GenericInsertQuery}} RETURNING {{.PKColumnsString}}";
-	var insertQueryNoPKColumns = "{{.GenericInsertQueryNoPK}} RETURNING {{.PKColumnsString}}";
+	var insertQueryAllColumns = "{{.GenericInsertQuery}}{{if ne .PKColumnsString ""}} RETURNING {{.PKColumnsString}}{{end}}";
+	var insertQueryNoPKColumns = "{{.GenericInsertQueryNoPK}}{{if ne .PKColumnsString ""}} RETURNING {{.PKColumnsString}}{{end}}";
 	
 	var query string = insertQueryAllColumns
 	
@@ -52,7 +52,7 @@ func (utilRef *t{{.GoFriendlyName}}Utils) {{$functionName}}({{$sourceStructName}
 	}
 
 	// define the values to be passed, from the structure
-	var  {{.ColumnsStringGoSafe}} = {{range $i, $e := .Columns}}{{if .Nullable}}{{generateNullableTypeStructTemplate .GoNullableType (print $sourceStructName "." $e.GoName) (print $sourceStructName "." $e.GoName "_IsNotNull")}}{{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
+	var  {{.ColumnsStringGoSafe}} = {{range $i, $e := .Columns}}{{if .Nullable}}{{generateNullableTypeStructTemplateForInsert .GoNullableType (print $sourceStructName "." $e.GoName) (print $sourceStructName "." $e.GoName "_IsNotNull")}}{{else}}{{$sourceStructName}}.{{$e.GoNameForInsert}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
 	
 	// this will print only if debug mode enabled
 	Debug("Insert Query:", query)
@@ -115,8 +115,8 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 	{{end}}
 
 	// define the select query
-	var insertQueryAllColumns = "{{.GenericInsertQuery}} RETURNING {{.PKColumnsString}}";
-	var insertQueryNoPKColumns = "{{.GenericInsertQueryNoPK}} RETURNING {{.PKColumnsString}}";
+	var insertQueryAllColumns = "{{.GenericInsertQuery}}{{if ne .PKColumnsString ""}} RETURNING {{.PKColumnsString}}{{end}}";
+	var insertQueryNoPKColumns = "{{.GenericInsertQueryNoPK}}{{if ne .PKColumnsString ""}} RETURNING {{.PKColumnsString}}{{end}}";
 	
 	var query string = insertQueryAllColumns
 	
@@ -141,7 +141,7 @@ func (txWrapper *Transaction) {{$functionName}}({{$sourceStructName}} *{{.GoFrie
 	}
 
 	// define the values to be passed, from the structure	
-	var  {{.ColumnsStringGoSafe}} = {{range $i, $e := .Columns}}{{if .Nullable}}{{generateNullableTypeStructTemplate .GoNullableType (print $sourceStructName "." $e.GoName) (print $sourceStructName "." $e.GoName "_IsNotNull")}}{{else}}{{$sourceStructName}}.{{$e.GoName}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
+	var  {{.ColumnsStringGoSafe}} = {{range $i, $e := .Columns}}{{if .Nullable}}{{generateNullableTypeStructTemplateForInsert .GoNullableType (print $sourceStructName "." $e.GoName) (print $sourceStructName "." $e.GoName "_IsNotNull")}}{{else}}{{$sourceStructName}}.{{$e.GoNameForInsert}}{{end}}{{if ne (plus1 $i) $colCount}},{{end}}{{end}}
 	
 	// this will print only if debug mode enabled
 	Debug("Insert Query:", query)
