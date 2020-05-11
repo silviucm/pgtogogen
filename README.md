@@ -5,13 +5,24 @@ The project was started in late 2014, committed to GitHub in early 2015, and I'v
 ### Status: In Progress
 The project is partially functional. As is the case with most GitHub projects, use it at your own risk. 
 
-### Installation
-Currently, this tool is compatible with pgx v3. For v2 compatibility you will need to use the pgxV2 branch
+### Compatibility
 
-To install the tool, run:
+pgtogogen is compatible with github.com/jackc/pgx/v3. For github.com/jackc/pgx/v2 compatibility, you will need to use the pgxV2 branch of pgtogogen
+
+pgtogogen/v2 version supports a minimum of github.com/jackc/pgx/v4. It will not work with earlier versions.
+
+### Installation
+
+To install the github.com/jackc/pgx/v3 compatible tool, run:
 ```bash
  go get -u github.com/silviucm/utils
  go get -u github.com/silviucm/pgtogogen
+```
+
+To install the github.com/jackc/pgx/v4 compatible tool, run:
+```bash
+ go get -u github.com/silviucm/utils
+ go get -u github.com/silviucm/pgtogogen/v2
 ```
 	
 ### Generating the model package	
