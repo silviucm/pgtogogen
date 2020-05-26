@@ -24,6 +24,7 @@ const _pgxDummyFnPlaceholder_{{.GoFriendlyName}} = pgx.BinaryFormatCode
 
 const {{.GoFriendlyName}}_DB_VIEW_NAME string = "{{.DbName}}"
 
+// {{.GoFriendlyName}} is a structure that corresponds to the {{.DbName}} view.
 type {{.GoFriendlyName}} struct {
 	{{range .Columns}}// database field name: {{.DbName}}
 	{{.GoName}} {{.GoType}}

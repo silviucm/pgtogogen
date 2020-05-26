@@ -56,7 +56,9 @@ const pgtypesDummy{{.GoFriendlyName}} = pgtype.Present
 
 const {{.GoFriendlyName}}_DB_TABLE_NAME string = "{{.DbName}}"
 
-{{if ne .DbComments ""}}/* {{.DbComments}} */{{end}}
+{{if ne .DbComments ""}}/*{{.GoFriendlyName}} is a struct that corresponds to the {{.DbName}} table.
+Database comments: {{.DbComments}} */{{else}}
+// {{.GoFriendlyName}} is a struct that corresponds to the {{.DbName}} table.{{end}}
 type {{.GoFriendlyName}} struct {
 	{{range .Columns}}
 	{{if ne .DbComments ""}}/* {{.DbComments}} */{{end}}
