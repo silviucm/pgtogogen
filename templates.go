@@ -92,7 +92,7 @@ func (t *{{$tableGoName}}) IsNotNull_{{.GoName}}() bool {
 }
 // IsNull_{{.GoName}} returns true is the field is null (a value is not present)
 func (t *{{$tableGoName}}) IsNull_{{.GoName}}() bool {
-	return t.{{.GoName}}_IsNotNull
+	return !t.{{.GoName}}_IsNotNull
 }
 {{end}}
 {{end}}
